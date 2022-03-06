@@ -1,0 +1,7 @@
+projects:
+  - name: rust
+    exist: Cargo.toml
+    purge: target
+  - name: node
+    exist: package.json
+    purge: node_modules
