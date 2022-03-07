@@ -1,4 +1,4 @@
-use std::{path::Path, sync::Arc, process};
+use std::{path::Path, process, sync::Arc};
 
 use anyhow::Result;
 use projclean::{run, scan, Config};
@@ -9,9 +9,7 @@ fn main() {
             eprintln!("{}", err);
             process::exit(1);
         }
-        _ => {
-
-        }
+        _ => {}
     }
 }
 
@@ -23,4 +21,3 @@ fn start() -> Result<()> {
     run(list)?;
     Ok(())
 }
-

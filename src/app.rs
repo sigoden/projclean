@@ -1,3 +1,5 @@
+use crate::walk::FindItem;
+use anyhow::Result;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
@@ -11,8 +13,8 @@ use tui::{
     widgets::{Block, Borders, Cell, Row, Table, TableState},
     Frame, Terminal,
 };
-use anyhow::Result;
-use crate::walk::FindItem;
+
+static UNITS: [char; 4] = ['T', 'G', 'M', 'K'];
 
 pub fn run(items: Vec<FindItem>) -> Result<()> {
     // setup terminal
@@ -103,7 +105,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
 
     let selected_style = Style::default().add_modifier(Modifier::REVERSED);
     let normal_style = Style::default().bg(Color::Blue);
-    let header_cells = ["kind", "path"]
+    let header_cells = ["path", "kind", "folder size"]
         .iter()
         .map(|h| Cell::from(*h).style(Style::default().fg(Color::Red)));
     let header = Row::new(header_cells)
@@ -112,17 +114,41 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         .bottom_margin(1);
     let rows = app.items.iter().map(|item| {
         let mut cells = vec![];
-        cells.push(Cell::from(item.kind.to_string()));
         cells.push(Cell::from(item.path.to_string_lossy()));
+        cells.push(Cell::from(item.kind.to_string()));
+        cells.push(Cell::from(match item.size {
+            Some(size) => human_readable_folder_size(size),
+            None => "?".to_string(),
+        }));
         Row::new(cells).height(1).bottom_margin(1)
     });
     let t = Table::new(rows)
         .header(header)
-        .block(Block::default().borders(Borders::ALL).title("Table"))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Select with ↑CURSOR↓ and press SPACE key to delete ⚠"),
+        )
         .highlight_style(selected_style)
         .widths(&[
-            Constraint::Min(20),
-            Constraint::Min(80)
+            Constraint::Percentage(80),
+            Constraint::Min(10),
+            Constraint::Min(10),
         ]);
     f.render_stateful_widget(t, rects[0], &mut app.state);
+}
+
+fn human_readable_folder_size(size: u64) -> String {
+    for (i, u) in UNITS.iter().enumerate() {
+        let num: u64 = 1024;
+        let marker = num.pow((UNITS.len() - i) as u32);
+        if size >= marker {
+            if size / marker < 10 {
+                return format!("{:.1}{}", (size as f32 / marker as f32), u);
+            } else {
+                return format!("{}{}", (size / marker), u);
+            }
+        }
+    }
+    return format!("{}B", size);
 }
