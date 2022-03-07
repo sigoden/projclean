@@ -1,6 +1,7 @@
 mod config;
 mod walk;
-mod tui;
+mod app;
 
 pub use config::Config;
 pub use walk::scan;
+pub use app::run;

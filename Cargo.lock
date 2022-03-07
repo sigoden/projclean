@@ -33,17 +33,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "clp"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "jwalk",
- "serde",
- "serde_yaml",
- "tui",
-]
-
-[[package]]
 name = "crossbeam"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -304,6 +293,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c7342d5883fbccae1cc37a2353b09c87c9b0f3afd73f5fb9bba687a1f733b029"
 dependencies = [
  "unicode-xid",
+]
+
+[[package]]
+name = "projclean"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "crossterm",
+ "jwalk",
+ "serde",
+ "serde_yaml",
+ "tui",
 ]
 
 [[package]]

@@ -1,5 +1,5 @@
 [package]
-name = "clp"
+name = "projclean"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,5 +11,6 @@ jwalk = "0.6.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
 tui = "0.17"
+crossterm = "0.22"
 
 [features]
