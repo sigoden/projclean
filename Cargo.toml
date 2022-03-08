@@ -12,12 +12,12 @@ categories = ["command-line-utilities"]
 keywords = ["command-line", "clean", "cleaner", "project"]
 
 [dependencies]
-anyhow = "1"
-jwalk = "0.6"
-tui = "0.17"
-crossterm = "0.22"
-clap = "3.1"
-cli-table = "0.4"
+anyhow = "1.0.56"
+jwalk = "0.6.0"
+tui = "0.17.0"
+crossterm = "0.23.0"
+clap = "3.1.6"
+cli-table = "0.4.6"
 
 [profile.release]
 lto = true
