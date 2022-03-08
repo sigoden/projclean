@@ -190,7 +190,7 @@ fn draw_list_view<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
                 }
                 _ => Span::styled("", styles[0]),
             };
-            let path_span = Span::styled(truncate_path(&item.path, width), styles[0]);
+            let path_span = Span::styled(truncate_path(&item.relative_path, width), styles[0]);
             let separate_span = Span::styled(PATH_SEPARATE, styles[0]);
             let size_span = Span::styled(item.size_text.clone(), styles[1]);
             let mut spans = vec![indicator_span, path_span, separate_span, size_span];
@@ -366,6 +366,7 @@ impl App {
 #[derive(Debug)]
 pub struct PathItem {
     path: PathBuf,
+    relative_path: PathBuf,
     size: Option<u64>,
     size_text: String,
     kind_text: String,
@@ -380,7 +381,12 @@ enum PathState {
 }
 
 impl PathItem {
-    pub fn new(path: PathBuf, size: Option<u64>, kind: Option<String>) -> Self {
+    pub fn new(
+        path: PathBuf,
+        relative_path: PathBuf,
+        size: Option<u64>,
+        kind: Option<String>,
+    ) -> Self {
         let size_text = match size {
             Some(size) => format!("[{}]", human_readable_folder_size(size)),
             None => "[?]".to_string(),
@@ -391,6 +397,7 @@ impl PathItem {
         };
         PathItem {
             path,
+            relative_path,
             size,
             size_text,
             kind_text,

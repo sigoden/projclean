@@ -38,12 +38,18 @@ pub fn search(entry: &Path, config: Arc<Config>, tx: Sender<Message>) -> Result<
             });
         },
     );
-    for entry in walk_dir {
-        if let Ok(dir_entry) = &entry {
+    for dir_entry_result in walk_dir {
+        if let Ok(dir_entry) = &dir_entry_result {
             if let Some(kind) = dir_entry.client_state.as_ref() {
                 let path = dir_entry.path();
                 let size = du(&path).ok();
-                tx.send(Message::AddPath(PathItem::new(path, size, kind.clone())))?;
+                let relative_path = path.strip_prefix(&entry)?.to_path_buf();
+                tx.send(Message::AddPath(PathItem::new(
+                    path,
+                    relative_path,
+                    size,
+                    kind.clone(),
+                )))?;
             }
         }
     }
