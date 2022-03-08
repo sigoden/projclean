@@ -24,6 +24,7 @@ use tui::{
     Frame, Terminal,
 };
 
+/// storage space unit
 static UNITS: [char; 4] = ['T', 'G', 'M', 'K'];
 /// limit kind string to 16 chars
 const KIND_LIMIT_WIDTH: usize = 12;
@@ -31,7 +32,11 @@ const KIND_LIMIT_WIDTH: usize = 12;
 const PATH_PRESERVE_WIDTH: usize = 12;
 /// interval to refresh ui
 const TICK_INTERVAL: u64 = 100;
+/// for seprate path with kind text and size text
+const PATH_SEPERATE: &str = " - ";
+/// spinner dots
 const SPINNER_DOTS: [&str; 4] = ["◐", "◓", "◑", "◒"];
+/// title or hint
 const TITLE: &str = "Select with ↑CURSOR↓ and press SPACE key to delete ⚠";
 
 pub fn run(tx: Sender<Message>, rx: Receiver<Message>) -> Result<()> {
@@ -151,11 +156,7 @@ fn draw_list_view<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
                 .unwrap_or_default();
 
             let mut width = width;
-            let size_text = match item.size {
-                Some(size) => human_readable_folder_size(size),
-                None => "?".to_string(),
-            };
-            width -= (item.kind.len() + size_text.len() + 7) as u16;
+            width -= (item.kind_text.len() + item.size_text.len() + PATH_SEPERATE.len()) as u16;
             let mut styles = vec![
                 Style::default(),
                 Style::default(),
@@ -180,16 +181,14 @@ fn draw_list_view<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
                 _ => Span::styled("", styles[0]),
             };
             let path_span = Span::styled(truncate_path(&item.path, width), styles[0]);
-            let sperate_span = Span::styled(" - ", styles[0]);
-            let size_span = Span::styled(format!("[{}]", size_text,), styles[1]);
-            let kind_span = Span::styled(format!("({})", item.kind), styles[2]);
-            ListItem::new(Spans::from(vec![
-                indicator_span,
-                path_span,
-                sperate_span,
-                size_span,
-                kind_span,
-            ]))
+            let sperate_span = Span::styled(PATH_SEPERATE, styles[0]);
+            let size_span = Span::styled(item.size_text.clone(), styles[1]);
+            let mut spans = vec![indicator_span, path_span, sperate_span, size_span];
+            if !item.kind_text.is_empty() {
+                let kind_span = Span::styled(item.kind_text.clone(), styles[2]);
+                spans.push(kind_span);
+            }
+            ListItem::new(Spans::from(spans))
         })
         .collect();
     let title = Span::styled(TITLE, Style::default().fg(Color::Yellow));
@@ -337,9 +336,10 @@ impl App {
 
 #[derive(Debug)]
 pub struct PathItem {
-    kind: String,
     path: PathBuf,
     size: Option<u64>,
+    size_text: String,
+    kind_text: String,
     state: PathState,
 }
 
@@ -351,11 +351,20 @@ enum PathState {
 }
 
 impl PathItem {
-    pub fn new(kind: &str, path: &Path, size: Option<u64>) -> Self {
+    pub fn new(path: PathBuf, size: Option<u64>, kind: Option<String>) -> Self {
+        let size_text = match size {
+            Some(size) => format!("[{}]", human_readable_folder_size(size)),
+            None => "[?]".to_string(),
+        };
+        let kind_text = match kind.as_ref() {
+            Some(kind) => format!("({})", truncate_kind(kind)),
+            None => "".to_string(),
+        };
         PathItem {
-            kind: truncate_kind(kind),
-            path: path.to_path_buf(),
+            path,
             size,
+            size_text,
+            kind_text,
             state: PathState::Normal,
         }
     }

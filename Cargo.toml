@@ -2,16 +2,22 @@
 name = "projclean"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["sigoden <sigoden@gmail.com>"]
+description = "Project Cleaner"
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/sigoden/projclean"
+repository = "https://github.com/sigoden/projclean"
+autotests = false
+categories = ["command-line-utilities"]
+keywords = ["command-line", "clean", "cleaner", "project"]
 
 [dependencies]
 anyhow = "1"
 jwalk = "0.6"
-serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.8"
 tui = "0.17"
 crossterm = "0.22"
+clap = "3.1"
+cli-table = "0.4"
 
 [profile.release]
 lto = true

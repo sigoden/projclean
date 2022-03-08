@@ -6,7 +6,7 @@ use std::sync::{mpsc::Sender, Arc};
 use crate::{Config, Message, PathItem};
 
 pub fn search(entry: &Path, config: Arc<Config>, tx: Sender<Message>) -> Result<()> {
-    let walk_dir = WalkDirGeneric::<((), Option<String>)>::new(entry).process_read_dir(
+    let walk_dir = WalkDirGeneric::<((), Option<Option<String>>)>::new(entry).process_read_dir(
         move |_depth, _path, _state, children| {
             let mut projects = vec![];
             for dir_entry in children.iter().flatten() {
@@ -28,7 +28,7 @@ pub fn search(entry: &Path, config: Arc<Config>, tx: Sender<Message>) -> Result<
                         for project in projects.iter() {
                             if project.purge.as_str() == name {
                                 dir_entry.read_children_path = None;
-                                dir_entry.client_state = Some(project.name.to_string());
+                                dir_entry.client_state = Some(project.name.clone());
                             }
                         }
                     }
@@ -41,7 +41,7 @@ pub fn search(entry: &Path, config: Arc<Config>, tx: Sender<Message>) -> Result<
             if let Some(kind) = dir_entry.client_state.as_ref() {
                 let path = dir_entry.path();
                 let size = du(&path).ok();
-                tx.send(Message::AddPath(PathItem::new(kind, &path, size)))?;
+                tx.send(Message::AddPath(PathItem::new(path, size, kind.clone())))?;
             }
         }
     }
