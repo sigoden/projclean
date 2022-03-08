@@ -179,7 +179,7 @@ fn draw_list_view<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
                 PathState::Deleted => {
                     styles = styles
                         .into_iter()
-                        .map(|v| v.add_modifier(Modifier::CROSSED_OUT))
+                        .map(|v| v.add_modifier(Modifier::DIM))
                         .collect();
                     width -= 3;
                     Span::styled(" ✘ ", styles[0])
@@ -193,11 +193,12 @@ fn draw_list_view<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
             let path_span = Span::styled(truncate_path(&item.relative_path, width), styles[0]);
             let separate_span = Span::styled(PATH_SEPARATE, styles[0]);
             let size_span = Span::styled(item.size_text.clone(), styles[1]);
-            let mut spans = vec![indicator_span, path_span, separate_span, size_span];
+            let mut spans = vec![path_span, separate_span, size_span];
             if !item.kind_text.is_empty() {
                 let kind_span = Span::styled(item.kind_text.clone(), styles[2]);
                 spans.push(kind_span);
             }
+            spans.push(indicator_span);
             ListItem::new(Spans::from(spans))
         })
         .collect();
