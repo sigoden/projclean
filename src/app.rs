@@ -20,7 +20,7 @@ use tui::{
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Spans},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
     Frame, Terminal,
 };
 
@@ -144,8 +144,9 @@ fn run_ui<B: Backend>(
 }
 
 fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
+    let height = if app.error.is_some() { 2 } else { 1 };
     let chunks = Layout::default()
-        .constraints([Constraint::Min(0), Constraint::Length(1)].as_ref())
+        .constraints([Constraint::Min(0), Constraint::Length(height)].as_ref())
         .split(f.size());
 
     draw_list_view(f, app, chunks[0]);
@@ -212,8 +213,8 @@ fn draw_list_view<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
 }
 
 fn draw_status_bar<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
-    let mut spans = vec![
-        Span::raw(format!(" {} ", app.status_bar_indicator())),
+    let mut text = vec![Spans::from(vec![
+        Span::raw(format!("{} ", app.status_bar_indicator())),
         Span::styled("releasable space:", Style::default().fg(Color::DarkGray)),
         Span::raw(format!(" {} ", human_readable_folder_size(app.total_size))),
         Span::styled("saved space:", Style::default().fg(Color::DarkGray)),
@@ -221,14 +222,14 @@ fn draw_status_bar<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
             " {} ",
             human_readable_folder_size(app.total_saved_size)
         )),
-    ];
+    ])];
     if let Some(message) = &app.error {
-        spans.push(Span::styled(
+        text.push(Spans::from(vec![Span::styled(
             format!("error: {} ", message),
             Style::default().fg(Color::Red),
-        ));
+        )]));
     }
-    let paragraph = Paragraph::new(Spans::from(spans)).wrap(Wrap { trim: true });
+    let paragraph = Paragraph::new(text);
     f.render_widget(paragraph, area);
 }
 

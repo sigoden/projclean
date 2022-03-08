@@ -29,8 +29,7 @@ impl Config {
         name: &'b str,
     ) {
         for project in &self.projects {
-            let (purge_matches, check_matches) =
-                matches.entry(project).or_insert(Default::default());
+            let (purge_matches, check_matches) = matches.entry(project).or_default();
             if project.purge.as_str() == name {
                 purge_matches.insert(name);
             }

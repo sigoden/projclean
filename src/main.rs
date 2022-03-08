@@ -130,7 +130,7 @@ fn set_working_dir(matches: &clap::ArgMatches) -> Result<PathBuf> {
                 base_directory.to_string_lossy()
             )
         })?;
-        Ok(base_directory.to_path_buf())
+        Ok(base_directory)
     } else {
         let current_dir = env::current_dir()?;
         Ok(current_dir)
