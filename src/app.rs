@@ -125,8 +125,8 @@ fn run_ui<B: Backend>(
             if let TuiEvent::Key(key) = event::read()? {
                 match key.code {
                     KeyCode::Char('q') => return Ok(()),
-                    KeyCode::Down => table_view.next(),
-                    KeyCode::Up => table_view.previous(),
+                    KeyCode::Char('j') | KeyCode::Down => table_view.next(),
+                    KeyCode::Char('k') | KeyCode::Up => table_view.previous(),
                     _ => {}
                 }
             }
@@ -150,7 +150,7 @@ struct StatusBar {
 impl StatusBar {
     fn indicator(&self) -> Span {
         if self.is_finished_search {
-            Span::styled(" ✔ ".to_string(), Style::default().fg(Color::Green))
+            Span::raw(" ✔ ".to_string())
         } else {
             let dot = LOADING_SPINNER_DOTS[self.spinner_index];
             Span::raw(format!(" {} ", dot))
@@ -172,14 +172,10 @@ fn draw<B: Backend>(f: &mut Frame<B>, table_view: &mut TableView, status_bar: &m
 
 fn draw_table_view<B: Backend>(f: &mut Frame<B>, table_view: &mut TableView, area: Rect) {
     let selected_style = Style::default().add_modifier(Modifier::REVERSED);
-    let normal_style = Style::default().bg(Color::Blue);
-    let header = Row::new(PathItem::header_cells())
-        .style(normal_style)
-        .height(1)
-        .bottom_margin(1);
+    let header = Row::new(PathItem::header_cells()).height(1);
     let rows = table_view.items.iter().map(|item| {
         let cells = item.row_cells();
-        Row::new(cells).height(1).bottom_margin(1)
+        Row::new(cells).height(1)
     });
     let widths = PathItem::widths();
     let table = Table::new(rows)
@@ -187,7 +183,7 @@ fn draw_table_view<B: Backend>(f: &mut Frame<B>, table_view: &mut TableView, are
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title("Select with ↑CURSOR↓ and press SPACE key to delete ⚠"),
+                .title(" Project Cleaner "),
         )
         .highlight_style(selected_style)
         .widths(&widths);
@@ -249,10 +245,10 @@ impl PathItem {
         vec![Constraint::Percentage(90), Constraint::Min(10)]
     }
     pub fn header_cells() -> Vec<Cell<'static>> {
-        let style = Style::default().fg(Color::Red);
         vec![
-            Cell::from("path").style(style),
-            Cell::from("space").style(style),
+            Cell::from("Select with ↑CURSOR↓ and press SPACE key to delete ⚠")
+                .style(Style::default().fg(Color::Yellow)),
+            Cell::from("space").style(Style::default().fg(Color::DarkGray)),
         ]
     }
     pub fn row_cells(&self) -> Vec<Cell> {
