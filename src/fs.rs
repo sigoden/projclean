@@ -1,35 +1,37 @@
 use anyhow::Result;
 use jwalk::WalkDirGeneric;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::{mpsc::Sender, Arc};
 
+use crate::config::Project;
 use crate::{Config, Message, PathItem};
 
 pub fn search(entry: &Path, config: Arc<Config>, tx: Sender<Message>) -> Result<()> {
     let walk_dir = WalkDirGeneric::<((), Option<Option<String>>)>::new(entry).process_read_dir(
         move |_depth, _path, _state, children| {
-            let mut projects = vec![];
+            let mut matches: HashMap<&Project, (HashSet<&str>, HashSet<&str>)> = HashMap::new();
             for dir_entry in children.iter().flatten() {
                 if let Some(name) = dir_entry.file_name.to_str() {
-                    if let Some(project) = config.find_project(name) {
-                        projects.push(project);
+                    config.test_path(&mut matches, name);
+                }
+            }
+            let mut matched_children: HashMap<String, &Project> = HashMap::new();
+            for (project, (purge_matches, check_matches)) in matches {
+                if !purge_matches.is_empty()
+                    && (!check_matches.is_empty() || project.check.is_none())
+                {
+                    for name in purge_matches {
+                        matched_children.insert(name.to_string(), project);
                     }
                 }
             }
-            children.retain(|dir_entry_result| {
-                dir_entry_result
-                    .as_ref()
-                    .map(|dir_entry| dir_entry.file_type.is_dir())
-                    .unwrap_or(false)
-            });
             children.iter_mut().for_each(|dir_entry_result| {
                 if let Ok(dir_entry) = dir_entry_result {
                     if let Some(name) = dir_entry.file_name.to_str() {
-                        for project in projects.iter() {
-                            if project.purge.as_str() == name {
-                                dir_entry.read_children_path = None;
-                                dir_entry.client_state = Some(project.name.clone());
-                            }
+                        if let Some(project) = matched_children.get(name) {
+                            dir_entry.read_children_path = None;
+                            dir_entry.client_state = Some(project.name.clone());
                         }
                     }
                 }

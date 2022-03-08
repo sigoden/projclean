@@ -3,13 +3,17 @@ use cli_table::{
     format::{Border, Separator},
     print_stdout, Cell, Style, Table,
 };
-use std::{fmt::Display, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Display,
+    str::FromStr,
+};
 
 const BUILTIN_PROJECTS: &str = include_str!("builtin.csv");
 
 #[derive(Debug, Default)]
 pub struct Config {
-    pub projects: Vec<Project>,
+    projects: Vec<Project>,
 }
 
 impl Config {
@@ -21,6 +25,24 @@ impl Config {
                 .map(|check| check.as_str() == name)
                 .unwrap_or(true)
         })
+    }
+    pub fn test_path<'a, 'b>(
+        &'a self,
+        matches: &mut HashMap<&'a Project, (HashSet<&'b str>, HashSet<&'b str>)>,
+        name: &'b str,
+    ) {
+        for project in &self.projects {
+            let (purge_matches, check_matches) =
+                matches.entry(project).or_insert(Default::default());
+            if project.purge.as_str() == name {
+                purge_matches.insert(name);
+            }
+            if let Some(check) = project.check.as_ref() {
+                if check.as_str() == name {
+                    check_matches.insert(name);
+                }
+            }
+        }
     }
 
     pub fn is_empty_projects(&self) -> bool {
@@ -80,7 +102,7 @@ impl Config {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Project {
     pub purge: String,
     pub check: Option<String>,

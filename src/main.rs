@@ -1,6 +1,6 @@
 use std::{
     env,
-    fs::read_to_string,
+    fs::{canonicalize, read_to_string},
     path::{Path, PathBuf},
     process,
     sync::{mpsc::channel, Arc},
@@ -116,15 +116,17 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
 fn set_working_dir(matches: &clap::ArgMatches) -> Result<PathBuf> {
     if let Some(base_directory) = matches.value_of_os("path") {
         let base_directory = Path::new(base_directory);
+
         if !is_existing_directory(base_directory) {
             return Err(anyhow!(
-                "The '--base-directory' path '{}' is not a directory.",
+                "The '--file' path '{}' is not a directory.",
                 base_directory.to_string_lossy()
             ));
         }
-        env::set_current_dir(base_directory).with_context(|| {
+        let base_directory = canonicalize(base_directory).unwrap();
+        env::set_current_dir(&base_directory).with_context(|| {
             format!(
-                "Could not set '{}' as the current working directory",
+                "Cannot set '{}' as the current working directory",
                 base_directory.to_string_lossy()
             )
         })?;
