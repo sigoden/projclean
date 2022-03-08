@@ -59,85 +59,6 @@ pub fn run(tx: Sender<Message>, rx: Receiver<Message>) -> Result<()> {
     Ok(())
 }
 
-#[derive(Debug, Default)]
-struct App {
-    state: ListState,
-    items: Vec<PathItem>,
-    spinner_index: usize,
-    total_size: u64,
-    total_saved_size: u64,
-    is_done: bool,
-}
-
-impl App {
-    fn next(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i >= self.items.len().saturating_sub(1) {
-                    0
-                } else {
-                    i + 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-    }
-
-    fn previous(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.items.len().saturating_sub(1)
-                } else {
-                    i - 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-    }
-
-    fn add_item(&mut self, item: PathItem) {
-        self.items.push(item);
-    }
-
-    fn start_deleting_item(&mut self) -> Option<(usize, PathBuf)> {
-        if let Some(index) = self.state.selected() {
-            let item = &mut self.items[index];
-            if item.state != PathState::Normal || item.size.is_none() {
-                None
-            } else {
-                item.state = PathState::StartDeleting;
-                Some((index, item.path.clone()))
-            }
-        } else {
-            None
-        }
-    }
-    fn set_item_deleted(&mut self, index: usize) -> Option<u64> {
-        if let Some(item) = self.items.get_mut(index) {
-            item.state = PathState::Deleted;
-            item.size
-        } else {
-            None
-        }
-    }
-    fn status_bar_indicator(&self) -> &'static str {
-        if self.is_done {
-            "✔"
-        } else {
-            self.spinner()
-        }
-    }
-    fn spinner(&self) -> &'static str {
-        SPINNER_DOTS[self.spinner_index]
-    }
-    fn on_tick(&mut self) {
-        self.spinner_index = (self.spinner_index + 1) % SPINNER_DOTS.len()
-    }
-}
-
 fn run_ui<B: Backend>(
     terminal: &mut Terminal<B>,
     sender: Sender<Message>,
@@ -159,9 +80,12 @@ fn run_ui<B: Backend>(
                 Message::DoneSearch => {
                     app.is_done = true;
                 }
-                Message::PathDeleted(index) => {
+                Message::SetPathDeleted(index) => {
                     let size = app.set_item_deleted(index);
                     app.total_saved_size += size.unwrap_or_default();
+                }
+                Message::PutError(message) => {
+                    app.error = Some(message);
                 }
             }
         }
@@ -172,6 +96,7 @@ fn run_ui<B: Backend>(
 
         if crossterm::event::poll(timeout)? {
             if let Event::Key(key) = event::read()? {
+                app.clear_error();
                 match key.code {
                     KeyCode::Char('q') => return Ok(()),
                     KeyCode::Char('j') | KeyCode::Down => app.next(),
@@ -179,11 +104,15 @@ fn run_ui<B: Backend>(
                     KeyCode::Char(' ') => {
                         if let Some((index, path)) = app.start_deleting_item() {
                             let sender = sender.clone();
-                            thread::spawn(move || {
-                                if let Err(err) = remove_dir_all(&path) {
-                                    eprintln!("Fail to remove dir {}, {}", path.display(), err);
-                                }
-                                sender.send(Message::PathDeleted(index)).unwrap();
+                            thread::spawn(move || match remove_dir_all(&path) {
+                                Ok(_) => sender.send(Message::SetPathDeleted(index)).unwrap(),
+                                Err(err) => sender
+                                    .send(Message::PutError(format!(
+                                        "Cannot delete '{}', {}",
+                                        path.display(),
+                                        err
+                                    )))
+                                    .unwrap(),
                             });
                         }
                     }
@@ -273,17 +202,23 @@ fn draw_list_view<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
 }
 
 fn draw_status_bar<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
-    let spans = Spans::from(vec![
+    let mut spans = vec![
         Span::raw(format!(" {} ", app.status_bar_indicator())),
-        Span::styled("releasable space: ", Style::default().fg(Color::DarkGray)),
-        Span::raw(format!("{} ", human_readable_folder_size(app.total_size))),
-        Span::styled("saved space: ", Style::default().fg(Color::DarkGray)),
+        Span::styled("releasable space:", Style::default().fg(Color::DarkGray)),
+        Span::raw(format!(" {} ", human_readable_folder_size(app.total_size))),
+        Span::styled("saved space:", Style::default().fg(Color::DarkGray)),
         Span::raw(format!(
-            "{} ",
+            " {} ",
             human_readable_folder_size(app.total_saved_size)
         )),
-    ]);
-    let paragraph = Paragraph::new(vec![spans]).wrap(Wrap { trim: true });
+    ];
+    if let Some(message) = &app.error {
+        spans.push(Span::styled(
+            format!("error: {} ", message),
+            Style::default().fg(Color::Red),
+        ));
+    }
+    let paragraph = Paragraph::new(Spans::from(spans)).wrap(Wrap { trim: true });
     f.render_widget(paragraph, area);
 }
 
@@ -305,8 +240,99 @@ fn human_readable_folder_size(size: u64) -> String {
 #[derive(Debug)]
 pub enum Message {
     AddPath(PathItem),
-    PathDeleted(usize),
+    SetPathDeleted(usize),
+    PutError(String),
     DoneSearch,
+}
+
+#[derive(Debug, Default)]
+struct App {
+    state: ListState,
+    items: Vec<PathItem>,
+    spinner_index: usize,
+    total_size: u64,
+    total_saved_size: u64,
+    is_done: bool,
+    error: Option<String>,
+}
+
+impl App {
+    fn next(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= self.items.len().saturating_sub(1) {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    fn previous(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.items.len().saturating_sub(1)
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    fn add_item(&mut self, item: PathItem) {
+        self.items.push(item);
+    }
+
+    fn start_deleting_item(&mut self) -> Option<(usize, PathBuf)> {
+        if let Some(index) = self.state.selected() {
+            let item = &mut self.items[index];
+            if item.state != PathState::Normal || item.size.is_none() {
+                None
+            } else {
+                item.state = PathState::StartDeleting;
+                Some((index, item.path.clone()))
+            }
+        } else {
+            None
+        }
+    }
+
+    fn set_item_deleted(&mut self, index: usize) -> Option<u64> {
+        if let Some(item) = self.items.get_mut(index) {
+            item.state = PathState::Deleted;
+            item.size
+        } else {
+            None
+        }
+    }
+
+    fn status_bar_indicator(&self) -> &'static str {
+        if self.is_done {
+            "✔"
+        } else {
+            self.spinner()
+        }
+    }
+
+    fn spinner(&self) -> &'static str {
+        SPINNER_DOTS[self.spinner_index]
+    }
+
+    fn clear_error(&mut self) {
+        if self.error.is_some() {
+            self.error = None;
+        }
+    }
+
+    fn on_tick(&mut self) {
+        self.spinner_index = (self.spinner_index + 1) % SPINNER_DOTS.len()
+    }
 }
 
 #[derive(Debug)]
