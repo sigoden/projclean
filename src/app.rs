@@ -102,10 +102,18 @@ fn run_ui<B: Backend>(
         if crossterm::event::poll(timeout)? {
             if let Event::Key(key) = event::read()? {
                 app.clear_error();
+
                 match key.code {
                     KeyCode::Char('q') => return Ok(()),
                     KeyCode::Char('j') | KeyCode::Down => app.next(),
                     KeyCode::Char('k') | KeyCode::Up => app.previous(),
+                    KeyCode::Home => app.begin(),
+                    KeyCode::Char('G') | KeyCode::End => app.end(),
+                    KeyCode::Char('g') => {
+                        if let Some(KeyCode::Char('g')) = app.last_keycode {
+                            app.begin();
+                        }
+                    }
                     KeyCode::Char(' ') => {
                         if let Some((index, path)) = app.start_deleting_item() {
                             let sender = sender.clone();
@@ -123,6 +131,7 @@ fn run_ui<B: Backend>(
                     }
                     _ => {}
                 }
+                app.last_keycode = Some(key.code);
             }
         }
 
@@ -253,6 +262,7 @@ struct App {
     total_saved_size: u64,
     is_done: bool,
     error: Option<String>,
+    last_keycode: Option<KeyCode>,
 }
 
 impl App {
@@ -282,6 +292,24 @@ impl App {
             None => 0,
         };
         self.state.select(Some(i));
+    }
+
+    fn begin(&mut self) {
+        let len = self.items.len();
+        if len == 0 {
+            self.state.select(None);
+        } else {
+            self.state.select(Some(0));
+        }
+    }
+
+    fn end(&mut self) {
+        let len = self.items.len();
+        if len == 0 {
+            self.state.select(None);
+        } else {
+            self.state.select(Some(len - 1));
+        }
     }
 
     fn add_item(&mut self, item: PathItem) {
