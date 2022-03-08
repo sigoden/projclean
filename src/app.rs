@@ -1,10 +1,9 @@
 use anyhow::Result;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event as TuiEvent, KeyCode},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use log::{error, warn};
 use std::{
     fs::remove_dir_all,
     path::{Path, PathBuf},
@@ -26,15 +25,16 @@ use tui::{
 };
 
 static UNITS: [char; 4] = ['T', 'G', 'M', 'K'];
-/// limit to 16 chars
-const KIND_WIDTH: usize = 12;
+/// limit kind string to 16 chars
+const KIND_LIMIT_WIDTH: usize = 12;
+/// num of chars to perserve in path ellision
+const PATH_PRESERVE_WIDTH: usize = 12;
 /// interval to refresh ui
 const TICK_INTERVAL: u64 = 100;
-
-const LOADING_SPINNER_DOTS: [&str; 4] = ["◐", "◓", "◑", "◒"];
+const SPINNER_DOTS: [&str; 4] = ["◐", "◓", "◑", "◒"];
 const TITLE: &str = "Select with ↑CURSOR↓ and press SPACE key to delete ⚠";
 
-pub fn run(tx: Sender<Event>, rx: Receiver<Event>) -> Result<()> {
+pub fn run(tx: Sender<Message>, rx: Receiver<Message>) -> Result<()> {
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -105,7 +105,7 @@ impl App {
     fn start_deleting_item(&mut self) -> Option<(usize, PathBuf)> {
         if let Some(index) = self.state.selected() {
             let item = &mut self.items[index];
-            if item.state != PathState::Normal {
+            if item.state != PathState::Normal || item.size.is_none() {
                 None
             } else {
                 item.state = PathState::StartDeleting;
@@ -131,17 +131,17 @@ impl App {
         }
     }
     fn spinner(&self) -> &'static str {
-        LOADING_SPINNER_DOTS[self.spinner_index]
+        SPINNER_DOTS[self.spinner_index]
     }
     fn on_tick(&mut self) {
-        self.spinner_index = (self.spinner_index + 1) % LOADING_SPINNER_DOTS.len()
+        self.spinner_index = (self.spinner_index + 1) % SPINNER_DOTS.len()
     }
 }
 
 fn run_ui<B: Backend>(
     terminal: &mut Terminal<B>,
-    sender: Sender<Event>,
-    receiver: Receiver<Event>,
+    sender: Sender<Message>,
+    receiver: Receiver<Message>,
     mut app: App,
 ) -> io::Result<()> {
     let tick_rate = Duration::from_millis(TICK_INTERVAL);
@@ -152,14 +152,14 @@ fn run_ui<B: Backend>(
 
         if let Ok(item) = receiver.try_recv() {
             match item {
-                Event::FoundPath(item) => {
+                Message::AddPath(item) => {
                     app.total_size += item.size.unwrap_or_default();
                     app.add_item(item);
                 }
-                Event::SearchFinished => {
+                Message::DoneSearch => {
                     app.is_done = true;
                 }
-                Event::DeletedPath(index) => {
+                Message::PathDeleted(index) => {
                     let size = app.set_item_deleted(index);
                     app.total_saved_size += size.unwrap_or_default();
                 }
@@ -171,7 +171,7 @@ fn run_ui<B: Backend>(
             .unwrap_or_else(|| Duration::from_secs(0));
 
         if crossterm::event::poll(timeout)? {
-            if let TuiEvent::Key(key) = event::read()? {
+            if let Event::Key(key) = event::read()? {
                 match key.code {
                     KeyCode::Char('q') => return Ok(()),
                     KeyCode::Char('j') | KeyCode::Down => app.next(),
@@ -181,11 +181,9 @@ fn run_ui<B: Backend>(
                             let sender = sender.clone();
                             thread::spawn(move || {
                                 if let Err(err) = remove_dir_all(&path) {
-                                    error!("Fail to remove dir {}, {}", path.display(), err);
+                                    eprintln!("Fail to remove dir {}, {}", path.display(), err);
                                 }
-                                if let Err(err) = sender.send(Event::DeletedPath(index)) {
-                                    warn!("Fail to send deleted path index {}, {}", index, err);
-                                }
+                                sender.send(Message::PathDeleted(index)).unwrap();
                             });
                         }
                     }
@@ -305,10 +303,10 @@ fn human_readable_folder_size(size: u64) -> String {
 }
 
 #[derive(Debug)]
-pub enum Event {
-    FoundPath(PathItem),
-    DeletedPath(usize),
-    SearchFinished,
+pub enum Message {
+    AddPath(PathItem),
+    PathDeleted(usize),
+    DoneSearch,
 }
 
 #[derive(Debug)]
@@ -339,7 +337,7 @@ impl PathItem {
 
 fn truncate_path(path: &Path, width: u16) -> String {
     let path = path.to_string_lossy();
-    let perserve_len: usize = 12;
+    let perserve_len: usize = PATH_PRESERVE_WIDTH;
     let width = (width as usize).max(2 * perserve_len + 3);
     let len = path.len();
     if len <= width {
@@ -352,9 +350,9 @@ fn truncate_path(path: &Path, width: u16) -> String {
     )
 }
 fn truncate_kind(kind: &str) -> String {
-    if kind.len() <= KIND_WIDTH {
+    if kind.len() <= KIND_LIMIT_WIDTH {
         kind.to_string()
     } else {
-        kind[0..KIND_WIDTH].to_string()
+        kind[0..KIND_LIMIT_WIDTH].to_string()
     }
 }

@@ -302,7 +302,6 @@ dependencies = [
  "anyhow",
  "crossterm",
  "jwalk",
- "log",
  "serde",
  "serde_yaml",
  "tui",

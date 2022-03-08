@@ -1,12 +1,11 @@
 use anyhow::Result;
 use jwalk::WalkDirGeneric;
-use log::warn;
 use std::path::Path;
 use std::sync::{mpsc::Sender, Arc};
 
-use crate::{Config, Event, PathItem};
+use crate::{Config, Message, PathItem};
 
-pub fn search(entry: &Path, config: Arc<Config>, tx: Sender<Event>) -> Result<()> {
+pub fn search(entry: &Path, config: Arc<Config>, tx: Sender<Message>) -> Result<()> {
     let walk_dir = WalkDirGeneric::<((), Option<String>)>::new(entry).process_read_dir(
         move |_depth, _path, _state, children| {
             let mut projects = vec![];
@@ -41,20 +40,18 @@ pub fn search(entry: &Path, config: Arc<Config>, tx: Sender<Event>) -> Result<()
         if let Ok(dir_entry) = &entry {
             if let Some(kind) = dir_entry.client_state.as_ref() {
                 let path = dir_entry.path();
-                let size = du(&path);
-                if let Err(err) = tx.send(Event::FoundPath(PathItem::new(kind, &path, size))) {
-                    warn!("Fai to add path {}, {}", path.display(), err);
-                }
+                let size = du(&path).ok();
+                tx.send(Message::AddPath(PathItem::new(kind, &path, size)))?;
             }
         }
     }
 
-    tx.send(Event::SearchFinished)?;
+    tx.send(Message::DoneSearch)?;
 
     Ok(())
 }
 
-fn du(path: &Path) -> Option<u64> {
+fn du(path: &Path) -> Result<u64> {
     let mut total: u64 = 0;
 
     for dir_entry_result in WalkDirGeneric::<((), Option<u64>)>::new(path)
@@ -70,16 +67,10 @@ fn du(path: &Path) -> Option<u64> {
             })
         })
     {
-        match dir_entry_result {
-            Ok(dir_entry) => {
-                if let Some(len) = &dir_entry.client_state {
-                    total += len;
-                }
-            }
-            Err(err) => {
-                warn!("Fail to read dir {}", err);
-            }
+        let dir_entry = dir_entry_result?;
+        if let Some(len) = &dir_entry.client_state {
+            total += len;
         }
     }
-    Some(total)
+    Ok(total)
 }
