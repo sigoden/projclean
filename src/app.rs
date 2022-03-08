@@ -6,7 +6,10 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use std::path::{Path, PathBuf};
+use std::{
+    fs::remove_dir_all,
+    path::{Path, PathBuf},
+};
 use std::{
     io,
     sync::mpsc::Receiver,
@@ -187,6 +190,7 @@ fn draw<B: Backend>(f: &mut Frame<B>, list_view: &mut ListView, status_bar: &mut
 }
 
 fn draw_list_view<B: Backend>(f: &mut Frame<B>, list_view: &mut ListView, area: Rect) {
+    let width = area.width - 2;
     let items: Vec<ListItem> = list_view
         .items
         .iter()
@@ -197,7 +201,7 @@ fn draw_list_view<B: Backend>(f: &mut Frame<B>, list_view: &mut ListView, area: 
                 .selected()
                 .map(|selected| selected == index)
                 .unwrap_or_default();
-            item.render(area.width, is_selected)
+            item.render(width, is_selected)
         })
         .collect();
     let title = Span::styled(TITLE, Style::default().fg(Color::Yellow));
@@ -261,6 +265,7 @@ impl PathItem {
     }
     fn delete(&mut self) -> Result<()> {
         self.is_deleted = true;
+        remove_dir_all(&self.path)?;
         Ok(())
     }
     fn render(&self, width: u16, is_selected: bool) -> ListItem {
@@ -269,7 +274,7 @@ impl PathItem {
             Some(size) => human_readable_folder_size(size),
             None => "?".to_string(),
         };
-        width -= (self.kind.len() + size_text.len() + 4) as u16;
+        width -= (self.kind.len() + size_text.len() + 7) as u16;
         let mut styles = vec![
             Style::default(),
             Style::default(),
@@ -285,12 +290,29 @@ impl PathItem {
                 .collect();
         }
         let path_span = Span::styled(Self::truncate_path(&self.path, width), styles[0]);
+        let sperate_span = Span::styled(" - ", styles[0]);
         let size_span = Span::styled(format!("[{}]", size_text,), styles[1]);
         let kind_span = Span::styled(format!("({})", self.kind), styles[2]);
-        ListItem::new(Spans::from(vec![path_span, size_span, kind_span]))
+        ListItem::new(Spans::from(vec![
+            path_span,
+            sperate_span,
+            size_span,
+            kind_span,
+        ]))
     }
-    fn truncate_path(path: &Path, _width: u16) -> String {
-        path.to_string_lossy().to_string()
+    fn truncate_path(path: &Path, width: u16) -> String {
+        let path = path.to_string_lossy();
+        let perserve_len: usize = 12;
+        let width = (width as usize).max(2 * perserve_len + 3);
+        let len = path.len();
+        if len <= width {
+            return path.to_string();
+        }
+        format!(
+            "{}...{}",
+            &path[0..perserve_len],
+            &path[(len - width + perserve_len + 3)..]
+        )
     }
     fn truncate_kind(kind: &str) -> String {
         if kind.len() <= KIND_WIDTH {
