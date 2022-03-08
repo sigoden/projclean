@@ -5,7 +5,7 @@ use cli_table::{
 };
 use std::{fmt::Display, str::FromStr};
 
-const BULTIN_PROJECTS: &str = include_str!("builtin.csv");
+const BUILTIN_PROJECTS: &str = include_str!("builtin.csv");
 
 #[derive(Debug, Default)]
 pub struct Config {
@@ -24,7 +24,7 @@ impl Config {
     }
 
     pub fn add_builtin(&mut self) -> Result<()> {
-        self.read_file(BULTIN_PROJECTS)
+        self.read_file(BUILTIN_PROJECTS)
     }
 
     pub fn add_project(&mut self, value: &str) -> Result<()> {

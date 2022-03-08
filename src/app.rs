@@ -28,12 +28,12 @@ use tui::{
 static UNITS: [char; 4] = ['T', 'G', 'M', 'K'];
 /// limit kind string to 16 chars
 const KIND_LIMIT_WIDTH: usize = 12;
-/// num of chars to perserve in path ellision
+/// num of chars to preserve in path ellision
 const PATH_PRESERVE_WIDTH: usize = 12;
 /// interval to refresh ui
 const TICK_INTERVAL: u64 = 100;
-/// for seprate path with kind text and size text
-const PATH_SEPERATE: &str = " - ";
+/// for separate path with kind text and size text
+const PATH_SEPARATE: &str = " - ";
 /// spinner dots
 const SPINNER_DOTS: [&str; 4] = ["◐", "◓", "◑", "◒"];
 /// title or hint
@@ -156,7 +156,7 @@ fn draw_list_view<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
                 .unwrap_or_default();
 
             let mut width = width;
-            width -= (item.kind_text.len() + item.size_text.len() + PATH_SEPERATE.len()) as u16;
+            width -= (item.kind_text.len() + item.size_text.len() + PATH_SEPARATE.len()) as u16;
             let mut styles = vec![
                 Style::default(),
                 Style::default(),
@@ -181,9 +181,9 @@ fn draw_list_view<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
                 _ => Span::styled("", styles[0]),
             };
             let path_span = Span::styled(truncate_path(&item.path, width), styles[0]);
-            let sperate_span = Span::styled(PATH_SEPERATE, styles[0]);
+            let separate_span = Span::styled(PATH_SEPARATE, styles[0]);
             let size_span = Span::styled(item.size_text.clone(), styles[1]);
-            let mut spans = vec![indicator_span, path_span, sperate_span, size_span];
+            let mut spans = vec![indicator_span, path_span, separate_span, size_span];
             if !item.kind_text.is_empty() {
                 let kind_span = Span::styled(item.kind_text.clone(), styles[2]);
                 spans.push(kind_span);
@@ -372,16 +372,16 @@ impl PathItem {
 
 fn truncate_path(path: &Path, width: u16) -> String {
     let path = path.to_string_lossy();
-    let perserve_len: usize = PATH_PRESERVE_WIDTH;
-    let width = (width as usize).max(2 * perserve_len + 3);
+    let preserve_len: usize = PATH_PRESERVE_WIDTH;
+    let width = (width as usize).max(2 * preserve_len + 3);
     let len = path.len();
     if len <= width {
         return path.to_string();
     }
     format!(
         "{}...{}",
-        &path[0..perserve_len],
-        &path[(len - width + perserve_len + 3)..]
+        &path[0..preserve_len],
+        &path[(len - width + preserve_len + 3)..]
     )
 }
 fn truncate_kind(kind: &str) -> String {
