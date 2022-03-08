@@ -215,9 +215,9 @@ fn draw_list_view<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
 fn draw_status_bar<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
     let mut text = vec![Spans::from(vec![
         Span::raw(format!("{} ", app.status_bar_indicator())),
-        Span::styled("releasable space:", Style::default().fg(Color::DarkGray)),
+        Span::styled("total space:", Style::default().fg(Color::DarkGray)),
         Span::raw(format!(" {} ", human_readable_folder_size(app.total_size))),
-        Span::styled("saved space:", Style::default().fg(Color::DarkGray)),
+        Span::styled("released space:", Style::default().fg(Color::DarkGray)),
         Span::raw(format!(
             " {} ",
             human_readable_folder_size(app.total_saved_size)
