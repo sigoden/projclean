@@ -3,7 +3,8 @@ use std::{
     fs::{canonicalize, read_to_string},
     path::{Path, PathBuf},
     process,
-    sync::{mpsc::channel, Arc},
+    sync::mpsc::channel,
+    thread,
 };
 
 use anyhow::{anyhow, Context, Result};
@@ -32,11 +33,12 @@ fn start() -> Result<()> {
         return Ok(());
     }
 
-    let current_dir = set_working_dir(&matches)?;
-
+    let entry = set_working_dir(&matches)?;
     let (tx, rx) = channel();
-    search(&current_dir, Arc::new(config), tx.clone())?;
+    let tx2 = tx.clone();
+    let handle = thread::spawn(move || search(entry, config, tx2));
     run(tx, rx)?;
+    handle.join().unwrap()?;
     Ok(())
 }
 

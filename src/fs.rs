@@ -1,15 +1,15 @@
 use anyhow::Result;
 use jwalk::WalkDirGeneric;
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
-use std::sync::{mpsc::Sender, Arc};
+use std::path::{Path, PathBuf};
+use std::sync::mpsc::Sender;
 
 use crate::config::Project;
 use crate::{Config, Message, PathItem};
 
-pub fn search(entry: &Path, config: Arc<Config>, tx: Sender<Message>) -> Result<()> {
-    let walk_dir = WalkDirGeneric::<((), Option<Option<String>>)>::new(entry).process_read_dir(
-        move |_depth, _path, _state, children| {
+pub fn search(entry: PathBuf, config: Config, tx: Sender<Message>) -> Result<()> {
+    let walk_dir = WalkDirGeneric::<((), Option<Option<String>>)>::new(entry.clone())
+        .process_read_dir(move |_depth, _path, _state, children| {
             let mut matches: HashMap<&Project, (HashSet<&str>, HashSet<&str>)> = HashMap::new();
             for dir_entry in children.iter().flatten() {
                 if let Some(name) = dir_entry.file_name.to_str() {
@@ -36,8 +36,8 @@ pub fn search(entry: &Path, config: Arc<Config>, tx: Sender<Message>) -> Result<
                     }
                 }
             });
-        },
-    );
+        });
+
     for dir_entry_result in walk_dir {
         if let Ok(dir_entry) = &dir_entry_result {
             if let Some(kind) = dir_entry.client_state.as_ref() {
