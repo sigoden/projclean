@@ -1,8 +1,5 @@
 use anyhow::{anyhow, bail, Error, Result};
-use cli_table::{
-    format::{Border, Separator},
-    print_stdout, Cell, Style, Table,
-};
+use cli_table::{print_stdout, Cell, Style, Table};
 use std::{
     collections::{HashMap, HashSet},
     fmt::Display,
@@ -76,13 +73,11 @@ impl Config {
         });
         let table = datagrid
             .table()
-            .border(Border::builder().build())
             .title(vec![
                 "To Purge".cell().bold(true),
                 "For check".cell().bold(true),
                 "Project Name".cell().bold(true),
             ])
-            .separator(Separator::builder().build())
             .bold(true);
 
         print_stdout(table)?;
