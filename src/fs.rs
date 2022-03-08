@@ -1,28 +1,12 @@
 use anyhow::Result;
 use jwalk::WalkDirGeneric;
 use log::warn;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::{mpsc::Sender, Arc};
 
-use crate::Config;
+use crate::{Config, Event, PathItem};
 
-#[derive(Debug)]
-pub enum ScanEvent {
-    Item(FindItem),
-    Finish,
-}
-
-#[derive(Debug)]
-pub struct FindItem {
-    /// Project kind
-    pub kind: String,
-    /// Path
-    pub path: PathBuf,
-    /// Total storage size
-    pub size: Option<u64>,
-}
-
-pub fn scan(entry: &Path, config: Arc<Config>, tx: Sender<ScanEvent>) -> Result<()> {
+pub fn search(entry: &Path, config: Arc<Config>, tx: Sender<Event>) -> Result<()> {
     let walk_dir = WalkDirGeneric::<((), Option<String>)>::new(entry).process_read_dir(
         move |_depth, _path, _state, children| {
             let mut projects = vec![];
@@ -55,19 +39,15 @@ pub fn scan(entry: &Path, config: Arc<Config>, tx: Sender<ScanEvent>) -> Result<
     );
     for entry in walk_dir {
         if let Ok(dir_entry) = &entry {
-            if let Some(name) = dir_entry.client_state.as_ref() {
+            if let Some(kind) = dir_entry.client_state.as_ref() {
                 let path = dir_entry.path();
                 let size = du(&path);
-                let _ = tx.send(ScanEvent::Item(FindItem {
-                    kind: name.to_string(),
-                    path,
-                    size,
-                }));
+                let _ = tx.send(Event::SearchFoundPath(PathItem::new(kind, &path, size)));
             }
         }
     }
 
-    tx.send(ScanEvent::Finish)?;
+    tx.send(Event::SearchFinished)?;
 
     Ok(())
 }

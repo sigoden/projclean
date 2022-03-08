@@ -1,10 +1,12 @@
-use crate::fs::{FindItem, ScanEvent};
+use crate::Event;
+
 use anyhow::Result;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event as TuiEvent, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use std::path::{Path, PathBuf};
 use std::{
     io,
     sync::mpsc::Receiver,
@@ -12,16 +14,22 @@ use std::{
 };
 use tui::{
     backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Layout},
+    layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, Cell, Row, Table, TableState},
+    text::{Span, Spans},
+    widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState, Wrap},
     Frame, Terminal,
 };
 
 static UNITS: [char; 4] = ['T', 'G', 'M', 'K'];
-const TICK_INTERVAL: u64 = 200;
+/// limit to 16 chars
+const KIND_WIDTH: usize = 12;
+/// interval to refresh ui
+const TICK_INTERVAL: u64 = 100;
 
-pub fn run(rx: Receiver<ScanEvent>) -> Result<()> {
+const LOADING_SPINNER_DOTS: [&str; 4] = ["◐", "◓", "◑", "◒"];
+
+pub fn run(rx: Receiver<Event>) -> Result<()> {
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -29,8 +37,9 @@ pub fn run(rx: Receiver<ScanEvent>) -> Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let app = App::new(rx);
-    let res = run_app(&mut terminal, app);
+    let table_view = TableView::default();
+    let status_bar = StatusBar::default();
+    let res = run_ui(&mut terminal, rx, table_view, status_bar);
 
     // restore terminal
     disable_raw_mode()?;
@@ -46,25 +55,14 @@ pub fn run(rx: Receiver<ScanEvent>) -> Result<()> {
     Ok(())
 }
 
-struct App {
+#[derive(Debug, Default)]
+struct TableView {
     state: TableState,
-    items: Vec<FindItem>,
-    receiver: Receiver<ScanEvent>,
-    total_size: u64,
-    is_finished_scan: bool,
+    items: Vec<PathItem>,
 }
 
-impl App {
-    fn new(receiver: Receiver<ScanEvent>) -> App {
-        App {
-            state: TableState::default(),
-            items: vec![],
-            receiver,
-            total_size: 0,
-            is_finished_scan: false,
-        }
-    }
-    pub fn next(&mut self) {
+impl TableView {
+    fn next(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
                 if i >= self.items.len() - 1 {
@@ -78,7 +76,7 @@ impl App {
         self.state.select(Some(i));
     }
 
-    pub fn previous(&mut self) {
+    fn previous(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
@@ -91,29 +89,30 @@ impl App {
         };
         self.state.select(Some(i));
     }
-    pub fn add_item(&mut self, item: FindItem) {
-        self.total_size += item.size.unwrap_or_default();
+    fn add_item(&mut self, item: PathItem) {
         self.items.push(item);
     }
-    pub fn finish_scan(&mut self) {
-        self.is_finished_scan = true;
-    }
-    pub fn on_tick(&mut self) {}
 }
 
-fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
+fn run_ui<B: Backend>(
+    terminal: &mut Terminal<B>,
+    receiver: Receiver<Event>,
+    mut table_view: TableView,
+    mut status_bar: StatusBar,
+) -> io::Result<()> {
     let tick_rate = Duration::from_millis(TICK_INTERVAL);
 
     let mut last_tick = Instant::now();
     loop {
-        terminal.draw(|f| ui(f, &mut app))?;
-        if let Ok(item) = app.receiver.try_recv() {
+        terminal.draw(|f| draw(f, &mut table_view, &mut status_bar))?;
+        if let Ok(item) = receiver.try_recv() {
             match item {
-                ScanEvent::Item(item) => {
-                    app.add_item(item);
+                Event::SearchFoundPath(item) => {
+                    status_bar.total_size += item.size.unwrap_or_default();
+                    table_view.add_item(item);
                 }
-                ScanEvent::Finish => {
-                    app.finish_scan();
+                Event::SearchFinished => {
+                    status_bar.is_finished_search = true;
                 }
             }
         }
@@ -123,50 +122,67 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
             .unwrap_or_else(|| Duration::from_secs(0));
 
         if crossterm::event::poll(timeout)? {
-            if let Event::Key(key) = event::read()? {
+            if let TuiEvent::Key(key) = event::read()? {
                 match key.code {
                     KeyCode::Char('q') => return Ok(()),
-                    KeyCode::Down => app.next(),
-                    KeyCode::Up => app.previous(),
+                    KeyCode::Down => table_view.next(),
+                    KeyCode::Up => table_view.previous(),
                     _ => {}
                 }
             }
         }
 
         if last_tick.elapsed() >= tick_rate {
-            app.on_tick();
+            status_bar.on_tick();
             last_tick = Instant::now();
         }
     }
 }
 
-fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
-    let rects = Layout::default()
-        .constraints([Constraint::Percentage(100)].as_ref())
-        .margin(5)
+#[derive(Debug, Default)]
+struct StatusBar {
+    spinner_index: usize,
+    total_size: u64,
+    total_saved_size: u64,
+    is_finished_search: bool,
+}
+
+impl StatusBar {
+    fn indicator(&self) -> Span {
+        if self.is_finished_search {
+            Span::styled(" ✔ ".to_string(), Style::default().fg(Color::Green))
+        } else {
+            let dot = LOADING_SPINNER_DOTS[self.spinner_index];
+            Span::raw(format!(" {} ", dot))
+        }
+    }
+    fn on_tick(&mut self) {
+        self.spinner_index = (self.spinner_index + 1) % LOADING_SPINNER_DOTS.len()
+    }
+}
+
+fn draw<B: Backend>(f: &mut Frame<B>, table_view: &mut TableView, status_bar: &mut StatusBar) {
+    let chunks = Layout::default()
+        .constraints([Constraint::Min(0), Constraint::Length(1)].as_ref())
         .split(f.size());
 
+    draw_table_view(f, table_view, chunks[0]);
+    draw_status_bar(f, status_bar, chunks[1]);
+}
+
+fn draw_table_view<B: Backend>(f: &mut Frame<B>, table_view: &mut TableView, area: Rect) {
     let selected_style = Style::default().add_modifier(Modifier::REVERSED);
     let normal_style = Style::default().bg(Color::Blue);
-    let header_cells = ["path", "kind", "size"]
-        .iter()
-        .map(|h| Cell::from(*h).style(Style::default().fg(Color::Red)));
-    let header = Row::new(header_cells)
+    let header = Row::new(PathItem::header_cells())
         .style(normal_style)
         .height(1)
         .bottom_margin(1);
-    let rows = app.items.iter().map(|item| {
-        let cells = vec![
-            Cell::from(item.path.to_string_lossy()),
-            Cell::from(item.kind.to_string()),
-            Cell::from(match item.size {
-                Some(size) => human_readable_folder_size(size),
-                None => "?".to_string(),
-            }),
-        ];
+    let rows = table_view.items.iter().map(|item| {
+        let cells = item.row_cells();
         Row::new(cells).height(1).bottom_margin(1)
     });
-    let t = Table::new(rows)
+    let widths = PathItem::widths();
+    let table = Table::new(rows)
         .header(header)
         .block(
             Block::default()
@@ -174,12 +190,26 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
                 .title("Select with ↑CURSOR↓ and press SPACE key to delete ⚠"),
         )
         .highlight_style(selected_style)
-        .widths(&[
-            Constraint::Percentage(80),
-            Constraint::Min(10),
-            Constraint::Min(10),
-        ]);
-    f.render_stateful_widget(t, rects[0], &mut app.state);
+        .widths(&widths);
+    f.render_stateful_widget(table, area, &mut table_view.state);
+}
+
+fn draw_status_bar<B: Backend>(f: &mut Frame<B>, status_bar: &mut StatusBar, area: Rect) {
+    let spans = Spans::from(vec![
+        status_bar.indicator(),
+        Span::styled("releasable space: ", Style::default().fg(Color::DarkGray)),
+        Span::raw(format!(
+            "{} ",
+            human_readable_folder_size(status_bar.total_size)
+        )),
+        Span::styled("saved space: ", Style::default().fg(Color::DarkGray)),
+        Span::raw(format!(
+            "{} ",
+            human_readable_folder_size(status_bar.total_saved_size)
+        )),
+    ]);
+    let paragraph = Paragraph::new(vec![spans]).wrap(Wrap { trim: true });
+    f.render_widget(paragraph, area);
 }
 
 fn human_readable_folder_size(size: u64) -> String {
@@ -195,4 +225,50 @@ fn human_readable_folder_size(size: u64) -> String {
         }
     }
     return format!("{}B", size);
+}
+
+#[derive(Debug)]
+pub struct PathItem {
+    /// Project kind
+    pub kind: String,
+    /// Path
+    pub path: PathBuf,
+    /// Total storage size
+    pub size: Option<u64>,
+}
+
+impl PathItem {
+    pub fn new(kind: &str, path: &Path, size: Option<u64>) -> Self {
+        PathItem {
+            kind: Self::truncate_kind(kind),
+            path: path.to_path_buf(),
+            size,
+        }
+    }
+    pub fn widths() -> Vec<Constraint> {
+        vec![Constraint::Percentage(90), Constraint::Min(10)]
+    }
+    pub fn header_cells() -> Vec<Cell<'static>> {
+        let style = Style::default().fg(Color::Red);
+        vec![
+            Cell::from("path").style(style),
+            Cell::from("space").style(style),
+        ]
+    }
+    pub fn row_cells(&self) -> Vec<Cell> {
+        vec![
+            Cell::from(self.path.to_string_lossy()),
+            Cell::from(match self.size {
+                Some(size) => human_readable_folder_size(size),
+                None => "?".to_string(),
+            }),
+        ]
+    }
+    fn truncate_kind(kind: &str) -> String {
+        if kind.len() <= KIND_WIDTH {
+            kind.to_string()
+        } else {
+            kind[0..KIND_WIDTH].to_string()
+        }
+    }
 }

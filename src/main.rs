@@ -5,7 +5,7 @@ use std::{
 };
 
 use anyhow::Result;
-use projclean::{run, scan, Config};
+use projclean::{run, search, Config};
 
 fn main() {
     if let Err(err) = start() {
@@ -18,7 +18,7 @@ fn start() -> Result<()> {
     let path = Path::new("/home/sigo/w");
     let config = Config::load()?;
     let (tx, rx) = channel();
-    scan(path, Arc::new(config), tx)?;
+    search(path, Arc::new(config), tx)?;
     run(rx)?;
     Ok(())
 }
