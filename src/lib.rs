@@ -1,9 +1,8 @@
 mod app;
 mod config;
-mod event;
 mod fs;
 
+use app::Event;
 pub use app::{run, PathItem};
 pub use config::Config;
-use event::Event;
 pub use fs::search;

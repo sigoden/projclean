@@ -18,7 +18,7 @@ fn start() -> Result<()> {
     path.push("tmp");
     let config = Config::load()?;
     let (tx, rx) = channel();
-    search(&path, Arc::new(config), tx)?;
-    run(rx)?;
+    search(&path, Arc::new(config), tx.clone())?;
+    run(tx, rx)?;
     Ok(())
 }

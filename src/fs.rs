@@ -42,7 +42,9 @@ pub fn search(entry: &Path, config: Arc<Config>, tx: Sender<Event>) -> Result<()
             if let Some(kind) = dir_entry.client_state.as_ref() {
                 let path = dir_entry.path();
                 let size = du(&path);
-                let _ = tx.send(Event::SearchFoundPath(PathItem::new(kind, &path, size)));
+                if let Err(err) = tx.send(Event::FoundPath(PathItem::new(kind, &path, size))) {
+                    warn!("Fai to add path {}, {}", path.display(), err);
+                }
             }
         }
     }

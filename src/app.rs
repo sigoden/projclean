@@ -1,14 +1,15 @@
-use crate::Event;
-
 use anyhow::Result;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event as TuiEvent, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use log::{error, warn};
 use std::{
     fs::remove_dir_all,
     path::{Path, PathBuf},
+    sync::mpsc::Sender,
+    thread,
 };
 use std::{
     io,
@@ -33,7 +34,7 @@ const TICK_INTERVAL: u64 = 100;
 const LOADING_SPINNER_DOTS: [&str; 4] = ["◐", "◓", "◑", "◒"];
 const TITLE: &str = "Select with ↑CURSOR↓ and press SPACE key to delete ⚠";
 
-pub fn run(rx: Receiver<Event>) -> Result<()> {
+pub fn run(tx: Sender<Event>, rx: Receiver<Event>) -> Result<()> {
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -41,9 +42,8 @@ pub fn run(rx: Receiver<Event>) -> Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let list_view = ListView::default();
-    let status_bar = StatusBar::default();
-    let res = run_ui(&mut terminal, rx, list_view, status_bar);
+    let app = App::default();
+    let res = run_ui(&mut terminal, tx, rx, app);
 
     // restore terminal
     disable_raw_mode()?;
@@ -60,12 +60,16 @@ pub fn run(rx: Receiver<Event>) -> Result<()> {
 }
 
 #[derive(Debug, Default)]
-struct ListView {
+struct App {
     state: ListState,
     items: Vec<PathItem>,
+    spinner_index: usize,
+    total_size: u64,
+    total_saved_size: u64,
+    is_done: bool,
 }
 
-impl ListView {
+impl App {
     fn next(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
@@ -98,36 +102,66 @@ impl ListView {
         self.items.push(item);
     }
 
-    fn delete_item(&mut self) -> Option<u64> {
+    fn start_deleting_item(&mut self) -> Option<(usize, PathBuf)> {
         if let Some(index) = self.state.selected() {
             let item = &mut self.items[index];
-            let _ = item.delete();
+            if item.state != PathState::Normal {
+                None
+            } else {
+                item.state = PathState::StartDeleting;
+                Some((index, item.path.clone()))
+            }
+        } else {
+            None
+        }
+    }
+    fn set_item_deleted(&mut self, index: usize) -> Option<u64> {
+        if let Some(item) = self.items.get_mut(index) {
+            item.state = PathState::Deleted;
             item.size
         } else {
             None
         }
     }
+    fn status_bar_indicator(&self) -> &'static str {
+        if self.is_done {
+            "✔"
+        } else {
+            self.spinner()
+        }
+    }
+    fn spinner(&self) -> &'static str {
+        LOADING_SPINNER_DOTS[self.spinner_index]
+    }
+    fn on_tick(&mut self) {
+        self.spinner_index = (self.spinner_index + 1) % LOADING_SPINNER_DOTS.len()
+    }
 }
 
 fn run_ui<B: Backend>(
     terminal: &mut Terminal<B>,
+    sender: Sender<Event>,
     receiver: Receiver<Event>,
-    mut list_view: ListView,
-    mut status_bar: StatusBar,
+    mut app: App,
 ) -> io::Result<()> {
     let tick_rate = Duration::from_millis(TICK_INTERVAL);
 
     let mut last_tick = Instant::now();
     loop {
-        terminal.draw(|f| draw(f, &mut list_view, &mut status_bar))?;
+        terminal.draw(|f| draw(f, &mut app))?;
+
         if let Ok(item) = receiver.try_recv() {
             match item {
-                Event::SearchFoundPath(item) => {
-                    status_bar.total_size += item.size.unwrap_or_default();
-                    list_view.add_item(item);
+                Event::FoundPath(item) => {
+                    app.total_size += item.size.unwrap_or_default();
+                    app.add_item(item);
                 }
                 Event::SearchFinished => {
-                    status_bar.is_finished_search = true;
+                    app.is_done = true;
+                }
+                Event::DeletedPath(index) => {
+                    let size = app.set_item_deleted(index);
+                    app.total_saved_size += size.unwrap_or_default();
                 }
             }
         }
@@ -140,11 +174,20 @@ fn run_ui<B: Backend>(
             if let TuiEvent::Key(key) = event::read()? {
                 match key.code {
                     KeyCode::Char('q') => return Ok(()),
-                    KeyCode::Char('j') | KeyCode::Down => list_view.next(),
-                    KeyCode::Char('k') | KeyCode::Up => list_view.previous(),
+                    KeyCode::Char('j') | KeyCode::Down => app.next(),
+                    KeyCode::Char('k') | KeyCode::Up => app.previous(),
                     KeyCode::Char(' ') => {
-                        let size = list_view.delete_item();
-                        status_bar.total_saved_size = size.unwrap_or_default();
+                        if let Some((index, path)) = app.start_deleting_item() {
+                            let sender = sender.clone();
+                            thread::spawn(move || {
+                                if let Err(err) = remove_dir_all(&path) {
+                                    error!("Fail to remove dir {}, {}", path.display(), err);
+                                }
+                                if let Err(err) = sender.send(Event::DeletedPath(index)) {
+                                    warn!("Fail to send deleted path index {}, {}", index, err);
+                                }
+                            });
+                        }
                     }
                     _ => {}
                 }
@@ -152,56 +195,74 @@ fn run_ui<B: Backend>(
         }
 
         if last_tick.elapsed() >= tick_rate {
-            status_bar.on_tick();
+            app.on_tick();
             last_tick = Instant::now();
         }
     }
 }
 
-#[derive(Debug, Default)]
-struct StatusBar {
-    spinner_index: usize,
-    total_size: u64,
-    total_saved_size: u64,
-    is_finished_search: bool,
-}
-
-impl StatusBar {
-    fn indicator(&self) -> Span {
-        if self.is_finished_search {
-            Span::raw(" ✔ ".to_string())
-        } else {
-            let dot = LOADING_SPINNER_DOTS[self.spinner_index];
-            Span::raw(format!(" {} ", dot))
-        }
-    }
-    fn on_tick(&mut self) {
-        self.spinner_index = (self.spinner_index + 1) % LOADING_SPINNER_DOTS.len()
-    }
-}
-
-fn draw<B: Backend>(f: &mut Frame<B>, list_view: &mut ListView, status_bar: &mut StatusBar) {
+fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     let chunks = Layout::default()
         .constraints([Constraint::Min(0), Constraint::Length(1)].as_ref())
         .split(f.size());
 
-    draw_list_view(f, list_view, chunks[0]);
-    draw_status_bar(f, status_bar, chunks[1]);
+    draw_list_view(f, app, chunks[0]);
+    draw_status_bar(f, app, chunks[1]);
 }
 
-fn draw_list_view<B: Backend>(f: &mut Frame<B>, list_view: &mut ListView, area: Rect) {
+fn draw_list_view<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
     let width = area.width - 2;
-    let items: Vec<ListItem> = list_view
+    let items: Vec<ListItem> = app
         .items
         .iter()
         .enumerate()
         .map(|(index, item)| {
-            let is_selected = list_view
+            let is_selected = app
                 .state
                 .selected()
                 .map(|selected| selected == index)
                 .unwrap_or_default();
-            item.render(width, is_selected)
+
+            let mut width = width;
+            let size_text = match item.size {
+                Some(size) => human_readable_folder_size(size),
+                None => "?".to_string(),
+            };
+            width -= (item.kind.len() + size_text.len() + 7) as u16;
+            let mut styles = vec![
+                Style::default(),
+                Style::default(),
+                Style::default().fg(Color::DarkGray),
+            ];
+            if is_selected {
+                styles = styles.into_iter().map(|v| v.fg(Color::Cyan)).collect();
+            }
+            let indicator_span = match item.state {
+                PathState::Deleted => {
+                    styles = styles
+                        .into_iter()
+                        .map(|v| v.add_modifier(Modifier::CROSSED_OUT))
+                        .collect();
+                    width -= 3;
+                    Span::styled(" ✘ ", styles[0])
+                }
+                PathState::StartDeleting => {
+                    width -= 3;
+                    Span::styled(format!(" {} ", app.spinner()), styles[0])
+                }
+                _ => Span::styled("", styles[0]),
+            };
+            let path_span = Span::styled(truncate_path(&item.path, width), styles[0]);
+            let sperate_span = Span::styled(" - ", styles[0]);
+            let size_span = Span::styled(format!("[{}]", size_text,), styles[1]);
+            let kind_span = Span::styled(format!("({})", item.kind), styles[2]);
+            ListItem::new(Spans::from(vec![
+                indicator_span,
+                path_span,
+                sperate_span,
+                size_span,
+                kind_span,
+            ]))
         })
         .collect();
     let title = Span::styled(TITLE, Style::default().fg(Color::Yellow));
@@ -210,21 +271,18 @@ fn draw_list_view<B: Backend>(f: &mut Frame<B>, list_view: &mut ListView, area: 
             .borders(Borders::ALL)
             .title(Spans::from(vec![title])),
     );
-    f.render_stateful_widget(list, area, &mut list_view.state);
+    f.render_stateful_widget(list, area, &mut app.state);
 }
 
-fn draw_status_bar<B: Backend>(f: &mut Frame<B>, status_bar: &mut StatusBar, area: Rect) {
+fn draw_status_bar<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
     let spans = Spans::from(vec![
-        status_bar.indicator(),
+        Span::raw(format!(" {} ", app.status_bar_indicator())),
         Span::styled("releasable space: ", Style::default().fg(Color::DarkGray)),
-        Span::raw(format!(
-            "{} ",
-            human_readable_folder_size(status_bar.total_size)
-        )),
+        Span::raw(format!("{} ", human_readable_folder_size(app.total_size))),
         Span::styled("saved space: ", Style::default().fg(Color::DarkGray)),
         Span::raw(format!(
             "{} ",
-            human_readable_folder_size(status_bar.total_saved_size)
+            human_readable_folder_size(app.total_saved_size)
         )),
     ]);
     let paragraph = Paragraph::new(vec![spans]).wrap(Wrap { trim: true });
@@ -247,78 +305,56 @@ fn human_readable_folder_size(size: u64) -> String {
 }
 
 #[derive(Debug)]
+pub enum Event {
+    FoundPath(PathItem),
+    DeletedPath(usize),
+    SearchFinished,
+}
+
+#[derive(Debug)]
 pub struct PathItem {
     kind: String,
     path: PathBuf,
     size: Option<u64>,
-    is_deleted: bool,
+    state: PathState,
+}
+
+#[derive(Debug, PartialEq)]
+enum PathState {
+    Normal,
+    StartDeleting,
+    Deleted,
 }
 
 impl PathItem {
     pub fn new(kind: &str, path: &Path, size: Option<u64>) -> Self {
         PathItem {
-            kind: Self::truncate_kind(kind),
+            kind: truncate_kind(kind),
             path: path.to_path_buf(),
             size,
-            is_deleted: false,
+            state: PathState::Normal,
         }
     }
-    fn delete(&mut self) -> Result<()> {
-        self.is_deleted = true;
-        remove_dir_all(&self.path)?;
-        Ok(())
+}
+
+fn truncate_path(path: &Path, width: u16) -> String {
+    let path = path.to_string_lossy();
+    let perserve_len: usize = 12;
+    let width = (width as usize).max(2 * perserve_len + 3);
+    let len = path.len();
+    if len <= width {
+        return path.to_string();
     }
-    fn render(&self, width: u16, is_selected: bool) -> ListItem {
-        let mut width = width;
-        let size_text = match self.size {
-            Some(size) => human_readable_folder_size(size),
-            None => "?".to_string(),
-        };
-        width -= (self.kind.len() + size_text.len() + 7) as u16;
-        let mut styles = vec![
-            Style::default(),
-            Style::default(),
-            Style::default().fg(Color::DarkGray),
-        ];
-        if is_selected {
-            styles = styles.into_iter().map(|v| v.fg(Color::Cyan)).collect();
-        }
-        if self.is_deleted {
-            styles = styles
-                .into_iter()
-                .map(|v| v.add_modifier(Modifier::CROSSED_OUT))
-                .collect();
-        }
-        let path_span = Span::styled(Self::truncate_path(&self.path, width), styles[0]);
-        let sperate_span = Span::styled(" - ", styles[0]);
-        let size_span = Span::styled(format!("[{}]", size_text,), styles[1]);
-        let kind_span = Span::styled(format!("({})", self.kind), styles[2]);
-        ListItem::new(Spans::from(vec![
-            path_span,
-            sperate_span,
-            size_span,
-            kind_span,
-        ]))
-    }
-    fn truncate_path(path: &Path, width: u16) -> String {
-        let path = path.to_string_lossy();
-        let perserve_len: usize = 12;
-        let width = (width as usize).max(2 * perserve_len + 3);
-        let len = path.len();
-        if len <= width {
-            return path.to_string();
-        }
-        format!(
-            "{}...{}",
-            &path[0..perserve_len],
-            &path[(len - width + perserve_len + 3)..]
-        )
-    }
-    fn truncate_kind(kind: &str) -> String {
-        if kind.len() <= KIND_WIDTH {
-            kind.to_string()
-        } else {
-            kind[0..KIND_WIDTH].to_string()
-        }
+    format!(
+        "{}...{}",
+        &path[0..perserve_len],
+        &path[(len - width + perserve_len + 3)..]
+    )
+}
+fn truncate_kind(kind: &str) -> String {
+    if kind.len() <= KIND_WIDTH {
+        kind.to_string()
+    } else {
+        kind[0..KIND_WIDTH].to_string()
     }
 }
