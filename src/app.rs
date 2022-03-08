@@ -65,7 +65,7 @@ impl TableView {
     fn next(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
-                if i >= self.items.len() - 1 {
+                if i >= self.items.len().saturating_sub(1) {
                     0
                 } else {
                     i + 1
@@ -80,7 +80,7 @@ impl TableView {
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.items.len() - 1
+                    self.items.len().saturating_sub(1)
                 } else {
                     i - 1
                 }
@@ -89,8 +89,19 @@ impl TableView {
         };
         self.state.select(Some(i));
     }
+
     fn add_item(&mut self, item: PathItem) {
         self.items.push(item);
+    }
+
+    fn delete_item(&mut self) -> Option<u64> {
+        if let Some(index) = self.state.selected() {
+            let item = &mut self.items[index];
+            let _ = item.delete();
+            item.size
+        } else {
+            None
+        }
     }
 }
 
@@ -127,6 +138,10 @@ fn run_ui<B: Backend>(
                     KeyCode::Char('q') => return Ok(()),
                     KeyCode::Char('j') | KeyCode::Down => table_view.next(),
                     KeyCode::Char('k') | KeyCode::Up => table_view.previous(),
+                    KeyCode::Char(' ') => {
+                        let size = table_view.delete_item();
+                        status_bar.total_saved_size = size.unwrap_or_default();
+                    }
                     _ => {}
                 }
             }
@@ -171,22 +186,24 @@ fn draw<B: Backend>(f: &mut Frame<B>, table_view: &mut TableView, status_bar: &m
 }
 
 fn draw_table_view<B: Backend>(f: &mut Frame<B>, table_view: &mut TableView, area: Rect) {
-    let selected_style = Style::default().add_modifier(Modifier::REVERSED);
-    let header = Row::new(PathItem::header_cells()).height(1);
-    let rows = table_view.items.iter().map(|item| {
-        let cells = item.row_cells();
-        Row::new(cells).height(1)
+    let path_width = 90 * area.width / 100;
+    let rows = table_view.items.iter().enumerate().map(|(index, item)| {
+        let is_selected = table_view
+            .state
+            .selected()
+            .map(|selected| selected == index)
+            .unwrap_or_default();
+        item.render_row(path_width, is_selected)
     });
-    let widths = PathItem::widths();
     let table = Table::new(rows)
-        .header(header)
+        .header(PathItem::render_header())
         .block(
             Block::default()
                 .borders(Borders::ALL)
                 .title(" Project Cleaner "),
         )
-        .highlight_style(selected_style)
-        .widths(&widths);
+        .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+        .widths(&[Constraint::Percentage(90), Constraint::Min(10)]);
     f.render_stateful_widget(table, area, &mut table_view.state);
 }
 
@@ -225,12 +242,10 @@ fn human_readable_folder_size(size: u64) -> String {
 
 #[derive(Debug)]
 pub struct PathItem {
-    /// Project kind
-    pub kind: String,
-    /// Path
-    pub path: PathBuf,
-    /// Total storage size
-    pub size: Option<u64>,
+    kind: String,
+    path: PathBuf,
+    size: Option<u64>,
+    is_deleted: bool,
 }
 
 impl PathItem {
@@ -239,26 +254,50 @@ impl PathItem {
             kind: Self::truncate_kind(kind),
             path: path.to_path_buf(),
             size,
+            is_deleted: false,
         }
     }
-    pub fn widths() -> Vec<Constraint> {
-        vec![Constraint::Percentage(90), Constraint::Min(10)]
+    fn delete(&mut self) -> Result<()> {
+        self.is_deleted = true;
+        Ok(())
     }
-    pub fn header_cells() -> Vec<Cell<'static>> {
-        vec![
+    fn render_header() -> Row<'static> {
+        let cells = vec![
             Cell::from("Select with ↑CURSOR↓ and press SPACE key to delete ⚠")
                 .style(Style::default().fg(Color::Yellow)),
             Cell::from("space").style(Style::default().fg(Color::DarkGray)),
-        ]
+        ];
+        Row::new(cells).height(1)
     }
-    pub fn row_cells(&self) -> Vec<Cell> {
-        vec![
-            Cell::from(self.path.to_string_lossy()),
+    fn render_row(&self, width: u16, is_selected: bool) -> Row {
+        let mut width = width;
+        width -= (self.kind.len() + 2) as u16;
+        let mut style = if is_selected {
+            Style::default().fg(Color::Cyan)
+        } else {
+            Style::default()
+        };
+        if self.is_deleted {
+            style = style.add_modifier(Modifier::CROSSED_OUT);
+        };
+        let spans = vec![
+            Span::styled(Self::truncate_path(&self.path, width), style),
+            Span::styled(
+                format!("({})", self.kind),
+                Style::default().fg(Color::DarkGray),
+            ),
+        ];
+        let cells = vec![
+            Cell::from(Spans::from(spans)),
             Cell::from(match self.size {
                 Some(size) => human_readable_folder_size(size),
                 None => "?".to_string(),
             }),
-        ]
+        ];
+        Row::new(cells).height(1)
+    }
+    fn truncate_path(path: &Path, _width: u16) -> String {
+        path.to_string_lossy().to_string()
     }
     fn truncate_kind(kind: &str) -> String {
         if kind.len() <= KIND_WIDTH {

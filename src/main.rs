@@ -1,5 +1,4 @@
 use std::{
-    path::Path,
     process,
     sync::{mpsc::channel, Arc},
 };
@@ -15,10 +14,11 @@ fn main() {
 }
 
 fn start() -> Result<()> {
-    let path = Path::new("/home/sigo/w");
+    let mut path = std::env::current_dir().unwrap();
+    path.push("tmp");
     let config = Config::load()?;
     let (tx, rx) = channel();
-    search(path, Arc::new(config), tx)?;
+    search(&path, Arc::new(config), tx)?;
     run(rx)?;
     Ok(())
 }
