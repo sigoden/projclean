@@ -17,7 +17,7 @@ use tui::{
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Spans},
-    widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState, Wrap},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap},
     Frame, Terminal,
 };
 
@@ -28,6 +28,7 @@ const KIND_WIDTH: usize = 12;
 const TICK_INTERVAL: u64 = 100;
 
 const LOADING_SPINNER_DOTS: [&str; 4] = ["◐", "◓", "◑", "◒"];
+const TITLE: &str = "Select with ↑CURSOR↓ and press SPACE key to delete ⚠";
 
 pub fn run(rx: Receiver<Event>) -> Result<()> {
     // setup terminal
@@ -37,9 +38,9 @@ pub fn run(rx: Receiver<Event>) -> Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let table_view = TableView::default();
+    let list_view = ListView::default();
     let status_bar = StatusBar::default();
-    let res = run_ui(&mut terminal, rx, table_view, status_bar);
+    let res = run_ui(&mut terminal, rx, list_view, status_bar);
 
     // restore terminal
     disable_raw_mode()?;
@@ -56,12 +57,12 @@ pub fn run(rx: Receiver<Event>) -> Result<()> {
 }
 
 #[derive(Debug, Default)]
-struct TableView {
-    state: TableState,
+struct ListView {
+    state: ListState,
     items: Vec<PathItem>,
 }
 
-impl TableView {
+impl ListView {
     fn next(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
@@ -108,19 +109,19 @@ impl TableView {
 fn run_ui<B: Backend>(
     terminal: &mut Terminal<B>,
     receiver: Receiver<Event>,
-    mut table_view: TableView,
+    mut list_view: ListView,
     mut status_bar: StatusBar,
 ) -> io::Result<()> {
     let tick_rate = Duration::from_millis(TICK_INTERVAL);
 
     let mut last_tick = Instant::now();
     loop {
-        terminal.draw(|f| draw(f, &mut table_view, &mut status_bar))?;
+        terminal.draw(|f| draw(f, &mut list_view, &mut status_bar))?;
         if let Ok(item) = receiver.try_recv() {
             match item {
                 Event::SearchFoundPath(item) => {
                     status_bar.total_size += item.size.unwrap_or_default();
-                    table_view.add_item(item);
+                    list_view.add_item(item);
                 }
                 Event::SearchFinished => {
                     status_bar.is_finished_search = true;
@@ -136,10 +137,10 @@ fn run_ui<B: Backend>(
             if let TuiEvent::Key(key) = event::read()? {
                 match key.code {
                     KeyCode::Char('q') => return Ok(()),
-                    KeyCode::Char('j') | KeyCode::Down => table_view.next(),
-                    KeyCode::Char('k') | KeyCode::Up => table_view.previous(),
+                    KeyCode::Char('j') | KeyCode::Down => list_view.next(),
+                    KeyCode::Char('k') | KeyCode::Up => list_view.previous(),
                     KeyCode::Char(' ') => {
-                        let size = table_view.delete_item();
+                        let size = list_view.delete_item();
                         status_bar.total_saved_size = size.unwrap_or_default();
                     }
                     _ => {}
@@ -176,35 +177,36 @@ impl StatusBar {
     }
 }
 
-fn draw<B: Backend>(f: &mut Frame<B>, table_view: &mut TableView, status_bar: &mut StatusBar) {
+fn draw<B: Backend>(f: &mut Frame<B>, list_view: &mut ListView, status_bar: &mut StatusBar) {
     let chunks = Layout::default()
         .constraints([Constraint::Min(0), Constraint::Length(1)].as_ref())
         .split(f.size());
 
-    draw_table_view(f, table_view, chunks[0]);
+    draw_list_view(f, list_view, chunks[0]);
     draw_status_bar(f, status_bar, chunks[1]);
 }
 
-fn draw_table_view<B: Backend>(f: &mut Frame<B>, table_view: &mut TableView, area: Rect) {
-    let path_width = 90 * area.width / 100;
-    let rows = table_view.items.iter().enumerate().map(|(index, item)| {
-        let is_selected = table_view
-            .state
-            .selected()
-            .map(|selected| selected == index)
-            .unwrap_or_default();
-        item.render_row(path_width, is_selected)
-    });
-    let table = Table::new(rows)
-        .header(PathItem::render_header())
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(" Project Cleaner "),
-        )
-        .highlight_style(Style::default().add_modifier(Modifier::BOLD))
-        .widths(&[Constraint::Percentage(90), Constraint::Min(10)]);
-    f.render_stateful_widget(table, area, &mut table_view.state);
+fn draw_list_view<B: Backend>(f: &mut Frame<B>, list_view: &mut ListView, area: Rect) {
+    let items: Vec<ListItem> = list_view
+        .items
+        .iter()
+        .enumerate()
+        .map(|(index, item)| {
+            let is_selected = list_view
+                .state
+                .selected()
+                .map(|selected| selected == index)
+                .unwrap_or_default();
+            item.render(area.width, is_selected)
+        })
+        .collect();
+    let title = Span::styled(TITLE, Style::default().fg(Color::Yellow));
+    let list = List::new(items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(Spans::from(vec![title])),
+    );
+    f.render_stateful_widget(list, area, &mut list_view.state);
 }
 
 fn draw_status_bar<B: Backend>(f: &mut Frame<B>, status_bar: &mut StatusBar, area: Rect) {
@@ -261,40 +263,31 @@ impl PathItem {
         self.is_deleted = true;
         Ok(())
     }
-    fn render_header() -> Row<'static> {
-        let cells = vec![
-            Cell::from("Select with ↑CURSOR↓ and press SPACE key to delete ⚠")
-                .style(Style::default().fg(Color::Yellow)),
-            Cell::from("space").style(Style::default().fg(Color::DarkGray)),
-        ];
-        Row::new(cells).height(1)
-    }
-    fn render_row(&self, width: u16, is_selected: bool) -> Row {
+    fn render(&self, width: u16, is_selected: bool) -> ListItem {
         let mut width = width;
-        width -= (self.kind.len() + 2) as u16;
-        let mut style = if is_selected {
-            Style::default().fg(Color::Cyan)
-        } else {
-            Style::default()
+        let size_text = match self.size {
+            Some(size) => human_readable_folder_size(size),
+            None => "?".to_string(),
         };
+        width -= (self.kind.len() + size_text.len() + 4) as u16;
+        let mut styles = vec![
+            Style::default(),
+            Style::default(),
+            Style::default().fg(Color::DarkGray),
+        ];
+        if is_selected {
+            styles = styles.into_iter().map(|v| v.fg(Color::Cyan)).collect();
+        }
         if self.is_deleted {
-            style = style.add_modifier(Modifier::CROSSED_OUT);
-        };
-        let spans = vec![
-            Span::styled(Self::truncate_path(&self.path, width), style),
-            Span::styled(
-                format!("({})", self.kind),
-                Style::default().fg(Color::DarkGray),
-            ),
-        ];
-        let cells = vec![
-            Cell::from(Spans::from(spans)),
-            Cell::from(match self.size {
-                Some(size) => human_readable_folder_size(size),
-                None => "?".to_string(),
-            }),
-        ];
-        Row::new(cells).height(1)
+            styles = styles
+                .into_iter()
+                .map(|v| v.add_modifier(Modifier::CROSSED_OUT))
+                .collect();
+        }
+        let path_span = Span::styled(Self::truncate_path(&self.path, width), styles[0]);
+        let size_span = Span::styled(format!("[{}]", size_text,), styles[1]);
+        let kind_span = Span::styled(format!("({})", self.kind), styles[2]);
+        ListItem::new(Spans::from(vec![path_span, size_span, kind_span]))
     }
     fn truncate_path(path: &Path, _width: u16) -> String {
         path.to_string_lossy().to_string()
