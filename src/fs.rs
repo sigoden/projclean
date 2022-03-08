@@ -1,9 +1,16 @@
-use anyhow::{bail, Result};
+use anyhow::Result;
 use jwalk::WalkDirGeneric;
+use log::warn;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{mpsc::Sender, Arc};
 
 use crate::Config;
+
+#[derive(Debug)]
+pub enum ScanEvent {
+    Item(FindItem),
+    Finish,
+}
 
 #[derive(Debug)]
 pub struct FindItem {
@@ -15,16 +22,14 @@ pub struct FindItem {
     pub size: Option<u64>,
 }
 
-pub fn scan(entry: &Path, config: Arc<Config>) -> Result<Vec<FindItem>> {
+pub fn scan(entry: &Path, config: Arc<Config>, tx: Sender<ScanEvent>) -> Result<()> {
     let walk_dir = WalkDirGeneric::<((), Option<String>)>::new(entry).process_read_dir(
         move |_depth, _path, _state, children| {
             let mut projects = vec![];
-            for dir_entry_result in children.iter() {
-                if let Ok(dir_entry) = dir_entry_result {
-                    if let Some(name) = dir_entry.file_name.to_str() {
-                        if let Some(project) = config.find_project(name) {
-                            projects.push(project);
-                        }
+            for dir_entry in children.iter().flatten() {
+                if let Some(name) = dir_entry.file_name.to_str() {
+                    if let Some(project) = config.find_project(name) {
+                        projects.push(project);
                     }
                 }
             }
@@ -48,25 +53,26 @@ pub fn scan(entry: &Path, config: Arc<Config>) -> Result<Vec<FindItem>> {
             });
         },
     );
-    let mut output = vec![];
     for entry in walk_dir {
         if let Ok(dir_entry) = &entry {
             if let Some(name) = dir_entry.client_state.as_ref() {
                 let path = dir_entry.path();
-                let size = du(&path).ok();
-                output.push(FindItem {
+                let size = du(&path);
+                let _ = tx.send(ScanEvent::Item(FindItem {
                     kind: name.to_string(),
                     path,
                     size,
-                })
+                }));
             }
         }
     }
 
-    Ok(output)
+    tx.send(ScanEvent::Finish)?;
+
+    Ok(())
 }
 
-fn du(path: &Path) -> Result<u64> {
+fn du(path: &Path) -> Option<u64> {
     let mut total: u64 = 0;
 
     for dir_entry_result in WalkDirGeneric::<((), Option<u64>)>::new(path)
@@ -88,10 +94,10 @@ fn du(path: &Path) -> Result<u64> {
                     total += len;
                 }
             }
-            Err(error) => {
-                bail!("Read dir throw {}", error);
+            Err(err) => {
+                warn!("Fail to read dir {}", err);
             }
         }
     }
-    Ok(total)
+    Some(total)
 }
