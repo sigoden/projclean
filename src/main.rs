@@ -62,12 +62,6 @@ fn command() -> Command<'static> {
                 .help("Export current projects as csv"),
         )
         .arg(
-            Arg::new("no_builtin")
-                .short('N')
-                .long("no-builtin")
-                .help("Don't load builtin projects"),
-        )
-        .arg(
             Arg::new("file")
                 .short('f')
                 .long("file")
@@ -106,15 +100,16 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
     } else {
         Config::default()
     };
-    if !matches.is_present("no_builtin") {
-        config.add_builtin().expect("broken builtin config file");
-    }
 
     if let Some(values) = matches.values_of("project") {
         for value in values {
             config.add_project(value)?;
         }
     }
+    if config.is_empty_projects() {
+        config.add_builtin().expect("broken builtin config file");
+    }
+
     Ok(config)
 }
 

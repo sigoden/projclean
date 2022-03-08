@@ -23,6 +23,10 @@ impl Config {
         })
     }
 
+    pub fn is_empty_projects(&self) -> bool {
+        self.projects.is_empty()
+    }
+
     pub fn add_builtin(&mut self) -> Result<()> {
         self.read_file(BUILTIN_PROJECTS)
     }
