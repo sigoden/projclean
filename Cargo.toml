@@ -9,7 +9,7 @@ homepage = "https://github.com/sigoden/projclean"
 repository = "https://github.com/sigoden/projclean"
 autotests = false
 categories = ["command-line-utilities"]
-keywords = ["command-line", "clean", "cleaner", "project"]
+keywords = ["command-line", "clean", "tui"]
 
 [dependencies]
 anyhow = "1.0.56"
