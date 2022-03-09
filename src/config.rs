@@ -6,7 +6,7 @@ use std::{
     str::FromStr,
 };
 
-const BUILTIN_PROJECTS: &str = include_str!("builtin.csv");
+const BUILTIN_PROJECTS: &str = include_str!("default.csv");
 
 #[derive(Debug, Default)]
 pub struct Config {
