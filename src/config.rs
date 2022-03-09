@@ -155,11 +155,33 @@ impl FromStr for Project {
 }
 
 fn to_regex(value: &str) -> Result<Regex> {
-    let re = match (value.starts_with('^'), value.ends_with('$')) {
-        (true, true) => value.to_string(),
-        (true, false) => format!("{}$", value),
-        (false, true) => format!("^{}", value),
-        (false, false) => format!("^{}$", value),
+    let re = if value
+        .chars()
+        .all(|v| v.is_alphanumeric() || v == '.' || v == '-' || v == '_')
+    {
+        format!("^{}$", value.replace('.', "\\."))
+    } else {
+        value.to_string()
     };
     Regex::new(&re).map_err(|_| anyhow!("Invalid regex value '{}'", value))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_project() {
+        let project: Project = "target".parse().unwrap();
+        assert_eq!(project.test_purge("target"), true);
+        assert_eq!(project.test_purge("-target"), false);
+        assert_eq!(project.test_purge("target-"), false);
+        assert_eq!(project.test_purge("Target"), false);
+
+        let project: Project = "^(Debug|Release)$;\\.sln$".parse().unwrap();
+        assert_eq!(project.test_purge("Debug"), true);
+        assert_eq!(project.test_purge("Debug-"), false);
+        assert_eq!(project.test_purge("-Debug"), false);
+        assert_eq!(project.test_check("App.sln"), true);
+    }
 }
