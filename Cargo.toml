@@ -17,7 +17,6 @@ jwalk = "0.6.0"
 tui = "0.17.0"
 crossterm = "0.23.0"
 clap = "3.1.6"
-cli-table = "0.4.6"
 
 [profile.release]
 lto = true

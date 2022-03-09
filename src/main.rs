@@ -23,11 +23,6 @@ fn start() -> Result<()> {
 
     let config = init_config(&matches)?;
 
-    if matches.is_present("export_projects") {
-        config.export_projects()?;
-        return Ok(());
-    }
-
     if matches.is_present("list_projects") {
         config.list_projects()?;
         return Ok(());
@@ -55,18 +50,13 @@ fn command() -> Command<'static> {
             Arg::new("list_projects")
                 .short('L')
                 .long("list-projects")
-                .help("List current projects"),
-        )
-        .arg(
-            Arg::new("export_projects")
-                .short('X')
-                .long("export-projects")
-                .help("Export current projects as csv"),
+                .help("List current projects in csv format"),
         )
         .arg(
             Arg::new("file")
                 .short('f')
                 .long("file")
+                .value_name("FILE")
                 .help("Load projects from file")
                 .allow_invalid_utf8(true)
                 .takes_value(true),
@@ -75,13 +65,15 @@ fn command() -> Command<'static> {
             Arg::new("project")
                 .short('p')
                 .long("project")
+                .value_name("PROJECT")
                 .help("Add project to search target")
                 .takes_value(true)
                 .multiple_values(true),
         )
         .arg(
-            Arg::new("path")
+            Arg::new("entry")
                 .allow_invalid_utf8(true)
+                .value_name("DIRECTORY")
                 .help("The root directory for the filesystem search"),
         )
 }
@@ -116,7 +108,7 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
 }
 
 fn set_working_dir(matches: &clap::ArgMatches) -> Result<PathBuf> {
-    if let Some(base_directory) = matches.value_of_os("path") {
+    if let Some(base_directory) = matches.value_of_os("entry") {
         let base_directory = Path::new(base_directory);
 
         if !is_existing_directory(base_directory) {

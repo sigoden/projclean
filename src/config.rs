@@ -1,5 +1,4 @@
 use anyhow::{anyhow, bail, Error, Result};
-use cli_table::{print_stdout, Cell, Style, Table};
 use std::{
     collections::{HashMap, HashSet},
     fmt::Display,
@@ -55,31 +54,10 @@ impl Config {
         Ok(())
     }
 
-    pub fn export_projects(&self) -> Result<()> {
+    pub fn list_projects(&self) -> Result<()> {
         for project in &self.projects {
             println!("{}", project);
         }
-        Ok(())
-    }
-
-    pub fn list_projects(&self) -> Result<()> {
-        let datagrid = self.projects.iter().map(|project| {
-            vec![
-                project.purge.clone().cell(),
-                project.check.clone().unwrap_or_default().cell(),
-                project.name.clone().unwrap_or_default().cell(),
-            ]
-        });
-        let table = datagrid
-            .table()
-            .title(vec![
-                "To Purge".cell().bold(true),
-                "For check".cell().bold(true),
-                "Project Name".cell().bold(true),
-            ])
-            .bold(true);
-
-        print_stdout(table)?;
         Ok(())
     }
 
