@@ -22,7 +22,9 @@ pub fn search(entry: PathBuf, config: Config, tx: Sender<Message>) -> Result<()>
                     && (!check_matches.is_empty() || project.check.is_none())
                 {
                     for name in purge_matches {
-                        matched_children.insert(name.to_string(), project);
+                        if !matched_children.contains_key(name) {
+                            matched_children.insert(name.to_string(), project);
+                        }
                     }
                 }
             }
