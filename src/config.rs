@@ -86,7 +86,7 @@ impl FromStr for Project {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<&str> = s.split(',').collect();
+        let parts: Vec<&str> = s.split(';').collect();
         let (purge, check, name) = match parts.len() {
             1 => (parts[0].trim(), "", ""),
             2 => (parts[0].trim(), parts[1].trim(), ""),
@@ -119,9 +119,9 @@ impl Display for Project {
         write!(f, "{}", self.purge)?;
         match (&self.check, &self.name) {
             (None, None) => {}
-            (None, Some(name)) => write!(f, ",,{}", name)?,
-            (Some(check), None) => write!(f, ",{}", check)?,
-            (Some(check), Some(name)) => write!(f, ",{},{}", check, name)?,
+            (None, Some(name)) => write!(f, ";;{}", name)?,
+            (Some(check), None) => write!(f, ";{}", check)?,
+            (Some(check), Some(name)) => write!(f, ";{};{}", check, name)?,
         }
         Ok(())
     }

@@ -1,2 +1,2 @@
-target,Cargo.toml,rust
-node_modules,package.json,node
+target;Cargo.toml;rust
+node_modules;package.json;node
