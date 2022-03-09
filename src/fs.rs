@@ -2,7 +2,7 @@ use anyhow::Result;
 use jwalk::WalkDirGeneric;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::Sender;
+use std::sync::mpsc::{Receiver, Sender};
 
 use crate::{Config, Message, PathItem};
 
@@ -49,6 +49,19 @@ pub fn search(entry: PathBuf, config: Config, tx: Sender<Message>) -> Result<()>
     Ok(())
 }
 
+pub fn ls(rx: Receiver<Message>) -> Result<()> {
+    for message in rx {
+        match message {
+            Message::AddPath(path) => {
+                println!("{}", path.path.display());
+            }
+            Message::DoneSearch => break,
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
 #[derive(Debug)]
 struct Checker<'a, 'b> {
     matches: HashMap<&'a str, (HashSet<&'b str>, HashSet<&'b str>)>,
@@ -64,7 +77,7 @@ impl<'a, 'b> Checker<'a, 'b> {
     }
     fn check(&mut self, name: &'b str) {
         for project in &self.config.projects {
-            let (purge_matches, check_matches) = self.matches.entry(&project.get_id()).or_default();
+            let (purge_matches, check_matches) = self.matches.entry(project.get_id()).or_default();
             if project.test_purge(name) {
                 purge_matches.insert(name);
             }

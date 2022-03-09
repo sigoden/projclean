@@ -9,7 +9,7 @@ use std::{
 
 use anyhow::{anyhow, Context, Result};
 use clap::{Arg, Command};
-use projclean::{run, search, Config};
+use projclean::{ls, run, search, Config};
 
 fn main() {
     if let Err(err) = start() {
@@ -29,10 +29,16 @@ fn start() -> Result<()> {
     }
 
     let entry = set_working_dir(&matches)?;
+
     let (tx, rx) = channel();
     let tx2 = tx.clone();
     let handle = thread::spawn(move || search(entry, config, tx2));
-    run(tx, rx)?;
+
+    if matches.is_present("list_targets") {
+        ls(rx)?;
+    } else {
+        run(rx, tx)?;
+    }
     handle.join().unwrap()?;
     Ok(())
 }
@@ -47,19 +53,16 @@ fn command() -> Command<'static> {
             env!("CARGO_PKG_REPOSITORY")
         ))
         .arg(
-            Arg::new("list_projects")
-                .short('L')
-                .long("list-projects")
-                .help("List current projects in csv format"),
+            Arg::new("list_targets")
+                .short('t')
+                .long("list-targets")
+                .help("List found targets ready to clean"),
         )
         .arg(
-            Arg::new("file")
-                .short('f')
-                .long("file")
-                .value_name("FILE")
-                .help("Load projects from file")
-                .allow_invalid_utf8(true)
-                .takes_value(true),
+            Arg::new("list_projects")
+                .short('l')
+                .long("list-projects")
+                .help("List current projects in csv format"),
         )
         .arg(
             Arg::new("project")
@@ -69,6 +72,15 @@ fn command() -> Command<'static> {
                 .help("Add project to search target")
                 .takes_value(true)
                 .multiple_values(true),
+        )
+        .arg(
+            Arg::new("file")
+                .short('f')
+                .long("file")
+                .value_name("FILE")
+                .help("Load projects from file")
+                .allow_invalid_utf8(true)
+                .takes_value(true),
         )
         .arg(
             Arg::new("entry")
@@ -133,6 +145,6 @@ fn set_working_dir(matches: &clap::ArgMatches) -> Result<PathBuf> {
     }
 }
 
-pub fn is_existing_directory(path: &Path) -> bool {
+fn is_existing_directory(path: &Path) -> bool {
     path.is_dir() && path.exists()
 }

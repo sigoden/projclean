@@ -1,3 +1,5 @@
+use crate::{human_readable_folder_size, Message, PathItem, PathState};
+
 use anyhow::Result;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
@@ -24,10 +26,6 @@ use tui::{
     Frame, Terminal,
 };
 
-/// storage space unit
-static UNITS: [char; 4] = ['T', 'G', 'M', 'K'];
-/// limit kind string to 16 chars
-const KIND_LIMIT_WIDTH: usize = 12;
 /// num of chars to preserve in path ellision
 const PATH_PRESERVE_WIDTH: usize = 12;
 /// interval to refresh ui
@@ -39,7 +37,7 @@ const SPINNER_DOTS: [&str; 4] = ["◐", "◓", "◑", "◒"];
 /// title or hint
 const TITLE: &str = "Select with ↑CURSOR↓ and press SPACE key to delete ⚠";
 
-pub fn run(tx: Sender<Message>, rx: Receiver<Message>) -> Result<()> {
+pub fn run(rx: Receiver<Message>, tx: Sender<Message>) -> Result<()> {
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -66,8 +64,8 @@ pub fn run(tx: Sender<Message>, rx: Receiver<Message>) -> Result<()> {
 
 fn run_ui<B: Backend>(
     terminal: &mut Terminal<B>,
-    sender: Sender<Message>,
-    receiver: Receiver<Message>,
+    tx: Sender<Message>,
+    rx: Receiver<Message>,
     mut app: App,
 ) -> io::Result<()> {
     let tick_rate = Duration::from_millis(TICK_INTERVAL);
@@ -76,7 +74,7 @@ fn run_ui<B: Backend>(
     loop {
         terminal.draw(|f| draw(f, &mut app))?;
 
-        if let Ok(item) = receiver.try_recv() {
+        if let Ok(item) = rx.try_recv() {
             match item {
                 Message::AddPath(item) => {
                     app.total_size += item.size.unwrap_or_default();
@@ -117,7 +115,7 @@ fn run_ui<B: Backend>(
                     }
                     KeyCode::Char(' ') => {
                         if let Some((index, path)) = app.start_deleting_item() {
-                            let sender = sender.clone();
+                            let sender = tx.clone();
                             thread::spawn(move || match remove_dir_all(&path) {
                                 Ok(_) => sender.send(Message::SetPathDeleted(index)).unwrap(),
                                 Err(err) => sender
@@ -232,30 +230,6 @@ fn draw_status_bar<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
     let paragraph = Paragraph::new(text);
     f.render_widget(paragraph, area);
 }
-
-fn human_readable_folder_size(size: u64) -> String {
-    for (i, u) in UNITS.iter().enumerate() {
-        let num: u64 = 1024;
-        let marker = num.pow((UNITS.len() - i) as u32);
-        if size >= marker {
-            if size / marker < 10 {
-                return format!("{:.1}{}", (size as f32 / marker as f32), u);
-            } else {
-                return format!("{}{}", (size / marker), u);
-            }
-        }
-    }
-    return format!("{}B", size);
-}
-
-#[derive(Debug)]
-pub enum Message {
-    AddPath(PathItem),
-    SetPathDeleted(usize),
-    PutError(String),
-    DoneSearch,
-}
-
 #[derive(Debug, Default)]
 struct App {
     state: ListState,
@@ -365,49 +339,6 @@ impl App {
     }
 }
 
-#[derive(Debug)]
-pub struct PathItem {
-    path: PathBuf,
-    relative_path: PathBuf,
-    size: Option<u64>,
-    size_text: String,
-    kind_text: String,
-    state: PathState,
-}
-
-#[derive(Debug, PartialEq)]
-enum PathState {
-    Normal,
-    StartDeleting,
-    Deleted,
-}
-
-impl PathItem {
-    pub fn new(
-        path: PathBuf,
-        relative_path: PathBuf,
-        size: Option<u64>,
-        kind: Option<String>,
-    ) -> Self {
-        let size_text = match size {
-            Some(size) => format!("[{}]", human_readable_folder_size(size)),
-            None => "[?]".to_string(),
-        };
-        let kind_text = match kind.as_ref() {
-            Some(kind) => format!("({})", truncate_kind(kind)),
-            None => "".to_string(),
-        };
-        PathItem {
-            path,
-            relative_path,
-            size,
-            size_text,
-            kind_text,
-            state: PathState::Normal,
-        }
-    }
-}
-
 fn truncate_path(path: &Path, width: u16) -> String {
     let path = path.to_string_lossy();
     let preserve_len: usize = PATH_PRESERVE_WIDTH;
@@ -421,11 +352,4 @@ fn truncate_path(path: &Path, width: u16) -> String {
         &path[0..preserve_len],
         &path[(len - width + preserve_len + 3)..]
     )
-}
-fn truncate_kind(kind: &str) -> String {
-    if kind.len() <= KIND_LIMIT_WIDTH {
-        kind.to_string()
-    } else {
-        kind[0..KIND_LIMIT_WIDTH].to_string()
-    }
 }
