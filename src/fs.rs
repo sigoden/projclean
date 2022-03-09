@@ -8,6 +8,7 @@ use crate::{Config, Message, PathItem};
 
 pub fn search(entry: PathBuf, config: Config, tx: Sender<Message>) -> Result<()> {
     let walk_dir = WalkDirGeneric::<((), Option<Option<String>>)>::new(entry.clone())
+        .skip_hidden(false)
         .process_read_dir(move |_depth, _path, _state, children| {
             let mut checker = Checker::new(&config);
             for dir_entry in children.iter().flatten() {
