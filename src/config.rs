@@ -1,4 +1,5 @@
 use anyhow::{anyhow, bail, Error, Result};
+use glob::Pattern;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Display,
@@ -33,7 +34,7 @@ impl Config {
                 purge_matches.insert(name);
             }
             if let Some(check) = project.check.as_ref() {
-                if check.as_str() == name {
+                if check.matches(name) {
                     check_matches.insert(name);
                 }
             }
@@ -77,7 +78,7 @@ impl Config {
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Project {
     pub purge: String,
-    pub check: Option<String>,
+    pub check: Option<Pattern>,
     pub name: Option<String>,
 }
 
@@ -100,7 +101,9 @@ impl FromStr for Project {
             check: if check.is_empty() {
                 None
             } else {
-                Some(check.to_string())
+                let check =
+                    Pattern::new(check).map_err(|_| anyhow!("Invalid glob value '{}'", check))?;
+                Some(check)
             },
             name: if name.is_empty() {
                 None
