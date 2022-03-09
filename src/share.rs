@@ -8,7 +8,7 @@ const KIND_LIMIT_WIDTH: usize = 12;
 #[derive(Debug)]
 pub enum Message {
     AddPath(PathItem),
-    SetPathDeleted(usize),
+    SetPathDeleted(PathBuf),
     PutError(String),
     DoneSearch,
 }

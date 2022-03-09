@@ -83,8 +83,8 @@ fn run_ui<B: Backend>(
                 Message::DoneSearch => {
                     app.is_done = true;
                 }
-                Message::SetPathDeleted(index) => {
-                    let size = app.set_item_deleted(index);
+                Message::SetPathDeleted(path) => {
+                    let size = app.set_item_deleted(path);
                     app.total_saved_size += size.unwrap_or_default();
                 }
                 Message::PutError(message) => {
@@ -113,11 +113,21 @@ fn run_ui<B: Backend>(
                             app.begin();
                         }
                     }
+                    KeyCode::Char('p') => {
+                        if let Some(KeyCode::Char('o')) = app.last_keycode {
+                            app.order_by_path();
+                        }
+                    }
+                    KeyCode::Char('s') => {
+                        if let Some(KeyCode::Char('o')) = app.last_keycode {
+                            app.order_by_size();
+                        }
+                    }
                     KeyCode::Char(' ') => {
-                        if let Some((index, path)) = app.start_deleting_item() {
+                        if let Some(path) = app.start_deleting_item() {
                             let sender = tx.clone();
                             thread::spawn(move || match remove_dir_all(&path) {
-                                Ok(_) => sender.send(Message::SetPathDeleted(index)).unwrap(),
+                                Ok(_) => sender.send(Message::SetPathDeleted(path)).unwrap(),
                                 Err(err) => sender
                                     .send(Message::PutError(format!(
                                         "Cannot delete '{}', {}",
@@ -230,6 +240,7 @@ fn draw_status_bar<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
     let paragraph = Paragraph::new(text);
     f.render_widget(paragraph, area);
 }
+
 #[derive(Debug, Default)]
 struct App {
     state: ListState,
@@ -289,26 +300,36 @@ impl App {
         }
     }
 
+    fn order_by_path(&mut self) {
+        self.items
+            .sort_by(|a, b| a.relative_path.cmp(&b.relative_path));
+    }
+
+    fn order_by_size(&mut self) {
+        self.items
+            .sort_by(|b, a| a.size.unwrap_or_default().cmp(&b.size.unwrap_or_default()));
+    }
+
     fn add_item(&mut self, item: PathItem) {
         self.items.push(item);
     }
 
-    fn start_deleting_item(&mut self) -> Option<(usize, PathBuf)> {
+    fn start_deleting_item(&mut self) -> Option<PathBuf> {
         if let Some(index) = self.state.selected() {
             let item = &mut self.items[index];
             if item.state != PathState::Normal || item.size.is_none() {
                 None
             } else {
                 item.state = PathState::StartDeleting;
-                Some((index, item.path.clone()))
+                Some(item.path.clone())
             }
         } else {
             None
         }
     }
 
-    fn set_item_deleted(&mut self, index: usize) -> Option<u64> {
-        if let Some(item) = self.items.get_mut(index) {
+    fn set_item_deleted(&mut self, path: PathBuf) -> Option<u64> {
+        if let Some(item) = self.items.iter_mut().find(|item| item.path == path) {
             item.state = PathState::Deleted;
             item.size
         } else {
