@@ -108,9 +108,11 @@ impl Project {
     pub fn get_id(&self) -> &str {
         &self.id
     }
+
     pub fn test_purge(&self, name: &str) -> bool {
         self.purge.is_match(name)
     }
+
     pub fn test_check(&self, name: &str) -> bool {
         match self.check.as_ref() {
             Some(check) => check.is_match(name),
@@ -136,11 +138,11 @@ impl FromStr for Project {
         }
         Ok(Project {
             id: s.to_string(),
-            purge: Regex::new(purge).map_err(|_| err())?,
+            purge: to_regex(purge).map_err(|_| err())?,
             check: if check.is_empty() {
                 None
             } else {
-                let check = Regex::new(check).map_err(|_| err())?;
+                let check = to_regex(check).map_err(|_| err())?;
                 Some(check)
             },
             name: if name.is_empty() {
@@ -150,4 +152,14 @@ impl FromStr for Project {
             },
         })
     }
+}
+
+fn to_regex(value: &str) -> Result<Regex> {
+    let re = match (value.starts_with('^'), value.ends_with('$')) {
+        (true, true) => value.to_string(),
+        (true, false) => format!("{}$", value),
+        (false, true) => format!("^{}", value),
+        (false, false) => format!("^{}$", value),
+    };
+    Regex::new(&re).map_err(|_| anyhow!("Invalid regex value '{}'", value))
 }

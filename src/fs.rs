@@ -76,6 +76,7 @@ impl<'a, 'b> Checker<'a, 'b> {
             matches: Default::default(),
         }
     }
+
     fn check(&mut self, name: &'b str) {
         for project in &self.config.projects {
             let (purge_matches, check_matches) = self.matches.entry(project.get_id()).or_default();
@@ -87,6 +88,7 @@ impl<'a, 'b> Checker<'a, 'b> {
             }
         }
     }
+
     fn to_matches(&self) -> HashMap<String, &'a str> {
         let mut matches: HashMap<String, &'a str> = HashMap::new();
         for (project_id, (purge_matches, check_matches)) in &self.matches {
@@ -132,6 +134,10 @@ fn du(path: &Path) -> Result<u64> {
 mod tests {
     use super::*;
     macro_rules! assert_match_paths {
+        ($id:literal, $names:expr) => {
+            let none: &[&str] = &[];
+            assert_match_paths!($id, $names, none);
+        };
         ($id:literal, $names:expr, $matched:expr) => {
             let mut config = Config::default();
             let ret = config.add_project($id);
@@ -153,5 +159,6 @@ mod tests {
             &["target", "Cargo.toml"],
             &["target"]
         );
+        assert_match_paths!("target;Cargo.toml;rust", &["target-", "Cargo.toml"]);
     }
 }
