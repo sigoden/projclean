@@ -17,7 +17,7 @@ jwalk = "0.6.0"
 tui = "0.17.0"
 crossterm = "0.23.0"
 clap = "3.1.6"
-glob = "0.3.0"
+regex = { version = "1.5.5", features = ["std"], default-features = false }
 
 [profile.release]
 lto = true

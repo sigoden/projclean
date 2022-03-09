@@ -89,7 +89,7 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
             )
         })?;
         let mut config = Config::default();
-        config.read_file(&content)?;
+        config.add_projects_from_file(&content)?;
         config
     } else {
         Config::default()
@@ -101,7 +101,9 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
         }
     }
     if config.is_empty_projects() {
-        config.add_builtin().expect("broken builtin config file");
+        config
+            .add_default_projects()
+            .expect("broken builtin config file");
     }
 
     Ok(config)

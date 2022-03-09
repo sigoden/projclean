@@ -4,36 +4,24 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::Sender;
 
-use crate::config::Project;
 use crate::{Config, Message, PathItem};
 
 pub fn search(entry: PathBuf, config: Config, tx: Sender<Message>) -> Result<()> {
     let walk_dir = WalkDirGeneric::<((), Option<Option<String>>)>::new(entry.clone())
         .process_read_dir(move |_depth, _path, _state, children| {
-            let mut matches: HashMap<&Project, (HashSet<&str>, HashSet<&str>)> = HashMap::new();
+            let mut checker = Checker::new(&config);
             for dir_entry in children.iter().flatten() {
                 if let Some(name) = dir_entry.file_name.to_str() {
-                    config.test_path(&mut matches, name);
+                    checker.check(name);
                 }
             }
-            let mut matched_children: HashMap<String, &Project> = HashMap::new();
-            for (project, (purge_matches, check_matches)) in matches {
-                if !purge_matches.is_empty()
-                    && (!check_matches.is_empty() || project.check.is_none())
-                {
-                    for name in purge_matches {
-                        if !matched_children.contains_key(name) {
-                            matched_children.insert(name.to_string(), project);
-                        }
-                    }
-                }
-            }
+            let matches = checker.to_matches();
             children.iter_mut().for_each(|dir_entry_result| {
                 if let Ok(dir_entry) = dir_entry_result {
                     if let Some(name) = dir_entry.file_name.to_str() {
-                        if let Some(project) = matched_children.get(name) {
+                        if let Some(project_id) = matches.get(name) {
                             dir_entry.read_children_path = None;
-                            dir_entry.client_state = Some(project.name.clone());
+                            dir_entry.client_state = Some(config.get_project_name(project_id));
                         }
                     }
                 }
@@ -61,6 +49,47 @@ pub fn search(entry: PathBuf, config: Config, tx: Sender<Message>) -> Result<()>
     Ok(())
 }
 
+#[derive(Debug)]
+struct Checker<'a, 'b> {
+    matches: HashMap<&'a str, (HashSet<&'b str>, HashSet<&'b str>)>,
+    config: &'a Config,
+}
+
+impl<'a, 'b> Checker<'a, 'b> {
+    fn new(config: &'a Config) -> Self {
+        Self {
+            config,
+            matches: Default::default(),
+        }
+    }
+    fn check(&mut self, name: &'b str) {
+        for project in &self.config.projects {
+            let (purge_matches, check_matches) = self.matches.entry(&project.get_id()).or_default();
+            if project.test_purge(name) {
+                purge_matches.insert(name);
+            }
+            if project.test_check(name) {
+                check_matches.insert(name);
+            }
+        }
+    }
+    fn to_matches(&self) -> HashMap<String, &'a str> {
+        let mut matches: HashMap<String, &'a str> = HashMap::new();
+        for (project_id, (purge_matches, check_matches)) in &self.matches {
+            if !purge_matches.is_empty()
+                && (!check_matches.is_empty() || self.config.is_project_no_check(project_id))
+            {
+                for name in purge_matches {
+                    if !matches.contains_key(*name) {
+                        matches.insert(name.to_string(), project_id);
+                    }
+                }
+            }
+        }
+        matches
+    }
+}
+
 fn du(path: &Path) -> Result<u64> {
     let mut total: u64 = 0;
 
@@ -83,4 +112,32 @@ fn du(path: &Path) -> Result<u64> {
         }
     }
     Ok(total)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    macro_rules! assert_match_paths {
+        ($id:literal, $names:expr, $matched:expr) => {
+            let mut config = Config::default();
+            let ret = config.add_project($id);
+            assert!(ret.is_ok());
+            let mut checker = Checker::new(&config);
+            for name in $names {
+                checker.check(name);
+            }
+            let matches = checker.to_matches();
+            let matched_names: Vec<&str> = matches.keys().map(|v| v.as_str()).collect();
+            assert_eq!(matched_names, $matched);
+        };
+    }
+
+    #[test]
+    fn test_match_paths() {
+        assert_match_paths!(
+            "^target$;Cargo.toml;rust",
+            &["target", "Cargo.toml"],
+            &["target"]
+        );
+    }
 }
