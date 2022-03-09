@@ -257,7 +257,7 @@ fn draw_status_bar<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
     let status_text = Paragraph::new(Spans::from(spans));
 
     let spans = vec![Span::styled(
-        format!("Press ? for help"),
+        "Press ? for help".to_string(),
         Style::default().fg(Color::DarkGray),
     )];
 
@@ -277,14 +277,14 @@ fn draw_error_line<B: Backend>(f: &mut Frame<B>, error: &str, area: Rect) {
 
 fn draw_help_view<B: Backend>(f: &mut Frame<B>, area: Rect) {
     let help_docs = vec![
-        ["Move selection up", " k  | <up> "],
-        ["Move selection down", " j  | <down> "],
-        ["Move to the top", " gg | <home> "],
-        ["Move to the bottom", " G  | <end> "],
-        ["Delete selected folder", " <space> "],
-        ["Sort by path", " op "],
-        ["Sort by size", " os "],
-        ["Exit", " q  | <ctrl+c> "],
+        ["Move selection up", "k  | <up> "],
+        ["Move selection down", "j  | <down> "],
+        ["Move to the top", "gg | <home> "],
+        ["Move to the bottom", "G  | <end> "],
+        ["Delete selected folder", "   | <space> "],
+        ["Sort by path", "op"],
+        ["Sort by size", "os"],
+        ["Exit", "q  | <ctrl+c>"],
     ];
 
     let items: Vec<ListItem> = help_docs
@@ -294,7 +294,7 @@ fn draw_help_view<B: Backend>(f: &mut Frame<B>, area: Rect) {
             let desc_style = Style::default();
             let keycode_style = Style::default();
             let content = vec![Spans::from(vec![
-                Span::styled(format!(" {:<26}", desc), desc_style),
+                Span::styled(format!(" {:<30}", desc), desc_style),
                 Span::styled(keycode.to_string(), keycode_style),
             ])];
             ListItem::new(content)
