@@ -19,7 +19,7 @@ use std::{
 };
 use tui::{
     backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Layout, Rect},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Spans},
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
@@ -35,7 +35,7 @@ const PATH_SEPARATE: &str = " - ";
 /// spinner dots
 const SPINNER_DOTS: [&str; 4] = ["◐", "◓", "◑", "◒"];
 /// title or hint
-const TITLE: &str = "Select with ↑CURSOR↓ and press SPACE key to delete ⚠";
+const TITLE: &str = "Select with ↑CURSOR↓ and press SPACE key to delete.";
 
 pub fn run(rx: Receiver<Message>, tx: Sender<Message>) -> Result<()> {
     // setup terminal
@@ -99,13 +99,14 @@ fn run_ui<B: Backend>(
 
         if crossterm::event::poll(timeout)? {
             if let Event::Key(key) = event::read()? {
-                app.clear_error();
+                app.clear_tmp_state();
 
                 match key.code {
                     KeyCode::Char('q') => return Ok(()),
                     KeyCode::Char('c') if key.modifiers == KeyModifiers::CONTROL => return Ok(()),
                     KeyCode::Char('j') | KeyCode::Down => app.next(),
                     KeyCode::Char('k') | KeyCode::Up => app.previous(),
+                    KeyCode::Char('?') => app.show_help = true,
                     KeyCode::Home => app.begin(),
                     KeyCode::Char('G') | KeyCode::End => app.end(),
                     KeyCode::Char('g') => {
@@ -152,13 +153,30 @@ fn run_ui<B: Backend>(
 }
 
 fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
-    let height = if app.error.is_some() { 2 } else { 1 };
+    if app.show_help {
+        draw_help_view(f, f.size());
+        return;
+    }
+
+    let constraints = if app.error.is_some() {
+        vec![
+            Constraint::Min(0),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ]
+    } else {
+        vec![Constraint::Min(0), Constraint::Length(1)]
+    };
+
     let chunks = Layout::default()
-        .constraints([Constraint::Min(0), Constraint::Length(height)].as_ref())
+        .constraints(constraints.as_ref())
         .split(f.size());
 
     draw_list_view(f, app, chunks[0]);
     draw_status_bar(f, app, chunks[1]);
+    if let Some(error) = app.error.as_ref() {
+        draw_error_line(f, error, chunks[2])
+    }
 }
 
 fn draw_list_view<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
@@ -221,7 +239,12 @@ fn draw_list_view<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
 }
 
 fn draw_status_bar<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
-    let mut text = vec![Spans::from(vec![
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Min(0), Constraint::Length(16)].as_ref())
+        .split(area);
+
+    let spans = vec![
         Span::raw(format!("{} ", app.status_bar_indicator())),
         Span::styled("total space:", Style::default().fg(Color::DarkGray)),
         Span::raw(format!(" {} ", human_readable_folder_size(app.total_size))),
@@ -230,15 +253,61 @@ fn draw_status_bar<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
             " {} ",
             human_readable_folder_size(app.total_saved_size)
         )),
-    ])];
-    if let Some(message) = &app.error {
-        text.push(Spans::from(vec![Span::styled(
-            format!("error: {} ", message),
-            Style::default().fg(Color::Red),
-        )]));
-    }
-    let paragraph = Paragraph::new(text);
+    ];
+    let status_text = Paragraph::new(Spans::from(spans));
+
+    let spans = vec![Span::styled(
+        format!("Press ? for help"),
+        Style::default().fg(Color::DarkGray),
+    )];
+
+    let help_text = Paragraph::new(Spans::from(spans));
+
+    f.render_widget(status_text, chunks[0]);
+    f.render_widget(help_text, chunks[1]);
+}
+
+fn draw_error_line<B: Backend>(f: &mut Frame<B>, error: &str, area: Rect) {
+    let paragraph = Paragraph::new(Spans::from(vec![Span::styled(
+        error.to_string(),
+        Style::default().fg(Color::Red),
+    )]));
     f.render_widget(paragraph, area);
+}
+
+fn draw_help_view<B: Backend>(f: &mut Frame<B>, area: Rect) {
+    let help_docs = vec![
+        ["Move selection up", " k  | <up> "],
+        ["Move selection down", " j  | <down> "],
+        ["Move to the top", " gg | <home> "],
+        ["Move to the bottom", " G  | <end> "],
+        ["Delete selected folder", " <space> "],
+        ["Sort by path", " op "],
+        ["Sort by size", " os "],
+        ["Exit", " q  | <ctrl+c> "],
+    ];
+
+    let items: Vec<ListItem> = help_docs
+        .into_iter()
+        .map(|row| {
+            let [desc, keycode] = row;
+            let desc_style = Style::default();
+            let keycode_style = Style::default();
+            let content = vec![Spans::from(vec![
+                Span::styled(format!(" {:<26}", desc), desc_style),
+                Span::styled(keycode.to_string(), keycode_style),
+            ])];
+            ListItem::new(content)
+        })
+        .collect();
+
+    let title = Span::styled(" Help ", Style::default().fg(Color::Yellow));
+    let list = List::new(items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(Spans::from(vec![title])),
+    );
+    f.render_widget(list, area);
 }
 
 #[derive(Debug, Default)]
@@ -249,6 +318,7 @@ struct App {
     total_size: u64,
     total_saved_size: u64,
     is_done: bool,
+    show_help: bool,
     error: Option<String>,
     last_keycode: Option<KeyCode>,
 }
@@ -349,10 +419,11 @@ impl App {
         SPINNER_DOTS[self.spinner_index]
     }
 
-    fn clear_error(&mut self) {
+    fn clear_tmp_state(&mut self) {
         if self.error.is_some() {
             self.error = None;
         }
+        self.show_help = false;
     }
 
     fn on_tick(&mut self) {
