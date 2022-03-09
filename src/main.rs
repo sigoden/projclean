@@ -69,7 +69,7 @@ fn command() -> Command<'static> {
                 .short('p')
                 .long("project")
                 .value_name("PROJECT")
-                .help("Add project to search target")
+                .help("Append a project")
                 .takes_value(true)
                 .multiple_values(true),
         )
@@ -104,18 +104,15 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
         config.add_projects_from_file(&content)?;
         config
     } else {
-        Config::default()
+        let mut config = Config::default();
+        config.add_default_projects();
+        config
     };
 
     if let Some(values) = matches.values_of("project") {
         for value in values {
             config.add_project(value)?;
         }
-    }
-    if config.is_empty_projects() {
-        config
-            .add_default_projects()
-            .expect("broken builtin config file");
     }
 
     Ok(config)

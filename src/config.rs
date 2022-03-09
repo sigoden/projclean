@@ -66,8 +66,9 @@ impl Config {
         }
     }
 
-    pub fn add_default_projects(&mut self) -> Result<()> {
+    pub fn add_default_projects(&mut self) {
         self.add_projects_from_file(BUILTIN_PROJECTS)
+            .expect("broken builtin config file");
     }
 
     pub fn add_projects_from_file(&mut self, content: &str) -> Result<()> {
