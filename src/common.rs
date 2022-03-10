@@ -65,6 +65,9 @@ fn truncate_kind(kind: &str) -> String {
 }
 
 pub fn human_readable_folder_size(size: u64) -> String {
+    if size == 0 {
+        return size.to_string();
+    }
     for (i, u) in UNITS.iter().enumerate() {
         let num: u64 = 1024;
         let marker = num.pow((UNITS.len() - i) as u32);
