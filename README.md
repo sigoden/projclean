@@ -1,6 +1,6 @@
 # ProjClean
 
-Find and clean heavy build or cache directory based on project
+Find and clean heavy build or cache directories in your system.
 
 ![screenshot](https://user-images.githubusercontent.com/4012553/157594166-74ea021b-2661-4799-993e-b3d80f369f4d.gif)
 
