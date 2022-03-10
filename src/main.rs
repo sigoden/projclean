@@ -56,20 +56,20 @@ fn command() -> Command<'static> {
             Arg::new("list_targets")
                 .short('t')
                 .long("list-targets")
-                .help("List found targets ready to clean"),
+                .help("List found targets"),
         )
         .arg(
             Arg::new("list_projects")
                 .short('l')
                 .long("list-projects")
-                .help("List current projects in csv format"),
+                .help("List current project rules"),
         )
         .arg(
             Arg::new("project")
                 .short('p')
                 .long("project")
                 .value_name("PROJECT")
-                .help("Append a project")
+                .help("Append a project rule")
                 .takes_value(true)
                 .multiple_values(true),
         )
@@ -78,15 +78,15 @@ fn command() -> Command<'static> {
                 .short('f')
                 .long("file")
                 .value_name("FILE")
-                .help("Load projects from file")
+                .help("Load project rules from <FILE>")
                 .allow_invalid_utf8(true)
                 .takes_value(true),
         )
         .arg(
             Arg::new("entry")
                 .allow_invalid_utf8(true)
-                .value_name("DIRECTORY")
-                .help("The root directory for the filesystem search"),
+                .value_name("PATH")
+                .help("Start searching from"),
         )
 }
 
