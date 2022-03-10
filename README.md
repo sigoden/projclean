@@ -14,6 +14,19 @@ ProjClean identifies projects based on the project feature file, and then decide
 - Identify `Java/Android` projects according to `build.gradle`, only the `build` directory in `Java/Android` projects should be cleaned.
 - Identify `Node` projects based on `package.json`, only the `node_modules` directory in `Node` projects should be cleaned.
 
+## Install
+
+### With cargo
+
+```
+cargo install projclean
+```
+
+### Binaries on macOS, Linux, Windows
+
+Download from [Github Releases](https://github.com/sigoden/projclean/releases), unzip and add projclean to your $PATH.
+
+
 ## Project Rule
 
 ProjClean finds target folders according to project rule.
