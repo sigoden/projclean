@@ -155,13 +155,13 @@ mod tests {
     #[test]
     fn test_match_paths() {
         assert_match_paths!(
-            "/^target$/;Cargo.toml;rust",
+            "^target$;Cargo.toml;rust",
             &["target", "Cargo.toml"],
             &["target"]
         );
         assert_match_paths!("target;Cargo.toml;rust", &["target.rs", "Cargo.toml"]);
         assert_match_paths!(
-            "/^(Debug|Release)$/;.*\\.sln;vs",
+            "^(Debug|Release)$;.*\\.sln;vs",
             &["Debug", "Demo.sln"],
             &["Debug"]
         );
