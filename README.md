@@ -1,5 +1,8 @@
 # ProjClean
 
+[![CI](https://github.com/sigoden/projclean/actions/workflows/ci.yaml/badge.svg)](https://github.com/sigoden/projclean/actions/workflows/ci.yaml)
+[![Crates](https://img.shields.io/crates/v/projclean.svg)](https://crates.io/crates/projclean)
+
 Find and clean heavy build or cache directories in your system.
 
 ![screenshot](https://user-images.githubusercontent.com/4012553/157594166-74ea021b-2661-4799-993e-b3d80f369f4d.gif)
