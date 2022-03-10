@@ -81,7 +81,7 @@ fn run_ui<B: Backend>(
                     app.add_item(item);
                 }
                 Message::DoneSearch => {
-                    app.is_done = true;
+                    app.done_search = true;
                 }
                 Message::SetPathDeleted(path) => {
                     let size = app.set_item_deleted(path);
@@ -244,8 +244,13 @@ fn draw_status_bar<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
         .constraints([Constraint::Min(0), Constraint::Length(16)].as_ref())
         .split(area);
 
+    let indicator = if app.done_search {
+        "".to_string()
+    } else {
+        format!(" {} ", app.spinner())
+    };
     let spans = vec![
-        Span::raw(format!("{} ", app.status_bar_indicator())),
+        Span::raw(indicator),
         Span::styled("total space:", Style::default().fg(Color::DarkGray)),
         Span::raw(format!(" {} ", human_readable_folder_size(app.total_size))),
         Span::styled("released space:", Style::default().fg(Color::DarkGray)),
@@ -317,7 +322,7 @@ struct App {
     spinner_index: usize,
     total_size: u64,
     total_saved_size: u64,
-    is_done: bool,
+    done_search: bool,
     show_help: bool,
     error: Option<String>,
     last_keycode: Option<KeyCode>,
@@ -404,14 +409,6 @@ impl App {
             item.size
         } else {
             None
-        }
-    }
-
-    fn status_bar_indicator(&self) -> &'static str {
-        if self.is_done {
-            "✔"
-        } else {
-            self.spinner()
         }
     }
 
