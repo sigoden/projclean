@@ -174,15 +174,15 @@ mod tests {
     #[test]
     fn test_project() {
         let project: Project = "target".parse().unwrap();
-        assert_eq!(project.test_purge("target"), true);
-        assert_eq!(project.test_purge("-target"), false);
-        assert_eq!(project.test_purge("target-"), false);
-        assert_eq!(project.test_purge("Target"), false);
+        assert!(project.test_purge("target"));
+        assert!(!project.test_purge("-target"));
+        assert!(!project.test_purge("target-"));
+        assert!(!project.test_purge("Target"));
 
         let project: Project = "^(Debug|Release)$;\\.sln$".parse().unwrap();
-        assert_eq!(project.test_purge("Debug"), true);
-        assert_eq!(project.test_purge("Debug-"), false);
-        assert_eq!(project.test_purge("-Debug"), false);
-        assert_eq!(project.test_check("App.sln"), true);
+        assert!(project.test_purge("Debug"));
+        assert!(!project.test_purge("Debug-"));
+        assert!(!project.test_purge("-Debug"));
+        assert!(project.test_check("App.sln"));
     }
 }

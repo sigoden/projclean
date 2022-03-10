@@ -53,7 +53,6 @@ projclean $HOME              # Find from $HOME directory
 projclean -l                 # Print project rules
 projclean -t                 # Print the matching directory directly (without entering tui)
 ```
-## TUI hotkey
 
 ## License
 
