@@ -3,16 +3,17 @@
 [![CI](https://github.com/sigoden/projclean/actions/workflows/ci.yaml/badge.svg)](https://github.com/sigoden/projclean/actions/workflows/ci.yaml)
 [![Crates](https://img.shields.io/crates/v/projclean.svg)](https://crates.io/crates/projclean)
 
-Find and clean heavy build or cache directories in your system.
+Find and clean heavy build or cache directories.
 
 ![screenshot](https://user-images.githubusercontent.com/4012553/157594166-74ea021b-2661-4799-993e-b3d80f369f4d.gif)
 
 
 ProjClean identifies projects based on the project feature file, and then decides based on that project whether or not the matching directory should be added to the cleanup list.
 
-- Identify `Rust` projects according to `Cargo.toml`, only `target` directories in `Rust` projects are to be cleaned.
-- Identify `Java/Android` projects according to `build.gradle`, only the `build` directory in `Java/Android` projects should be cleaned.
-- Identify `Node` projects based on `package.json`, only the `node_modules` directory in `Node` projects should be cleaned.
+- Identify `Node` projects based on `package.json`, clean `node_modules` 
+- Identify `Rust` projects based on `Cargo.toml`, clean `target`.
+- Identify `Java/Android` projects based on `build.gradle`, clean `build`.
+- Identify `Visutal Studio` projects based on `*.sln`, clean `Debug` `Release`.
 
 ## Install
 
@@ -36,8 +37,7 @@ Each project rule consist of three parts.
 <to clean up directory>[;feature file][;project name]
 ```
 
-You can print the default project rules with `projclean -l`.
-
+The default project rules are:
 ```
 node_modules;package.json;node
 target;Cargo.toml;rust
