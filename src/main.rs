@@ -69,7 +69,7 @@ fn command() -> Command<'static> {
                 .short('p')
                 .long("project")
                 .value_name("PROJECT")
-                .help("Append a project rule")
+                .help("Add a project rule")
                 .takes_value(true)
                 .multiple_values(true),
         )
@@ -104,15 +104,17 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
         config.add_projects_from_file(&content)?;
         config
     } else {
-        let mut config = Config::default();
-        config.add_default_projects();
-        config
+        Config::default()
     };
 
     if let Some(values) = matches.values_of("project") {
         for value in values {
             config.add_project(value)?;
         }
+    }
+
+    if config.projects.is_empty() {
+        config.add_default_projects();
     }
 
     Ok(config)

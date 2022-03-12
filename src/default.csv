@@ -1,4 +1,4 @@
-node_modules;package.json;node
+node_modules;;node
 target;Cargo.toml;rust
 build;build.gradle;java
 ^(Debug|Release)$;\.sln$;vs
