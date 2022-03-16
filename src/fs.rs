@@ -20,9 +20,9 @@ pub fn search(entry: PathBuf, config: Config, tx: Sender<Message>) -> Result<()>
             children.iter_mut().for_each(|dir_entry_result| {
                 if let Ok(dir_entry) = dir_entry_result {
                     if let Some(name) = dir_entry.file_name.to_str() {
-                        if let Some(project_id) = matches.get(name) {
+                        if let Some(rule_id) = matches.get(name) {
                             dir_entry.read_children_path = None;
-                            dir_entry.client_state = Some(config.get_project_name(project_id));
+                            dir_entry.client_state = Some(config.get_rule_name(rule_id));
                         }
                     }
                 }
@@ -78,12 +78,12 @@ impl<'a, 'b> Checker<'a, 'b> {
     }
 
     fn check(&mut self, name: &'b str) {
-        for project in &self.config.projects {
-            let (purge_matches, check_matches) = self.matches.entry(project.get_id()).or_default();
-            if project.test_purge(name) {
+        for rule in &self.config.rules {
+            let (purge_matches, check_matches) = self.matches.entry(rule.get_id()).or_default();
+            if rule.test_purge(name) {
                 purge_matches.insert(name);
             }
-            if project.test_check(name) {
+            if rule.test_check(name) {
                 check_matches.insert(name);
             }
         }
@@ -91,13 +91,13 @@ impl<'a, 'b> Checker<'a, 'b> {
 
     fn to_matches(&self) -> HashMap<String, &'a str> {
         let mut matches: HashMap<String, &'a str> = HashMap::new();
-        for (project_id, (purge_matches, check_matches)) in &self.matches {
+        for (rule_id, (purge_matches, check_matches)) in &self.matches {
             if !purge_matches.is_empty()
-                && (!check_matches.is_empty() || self.config.is_project_no_check(project_id))
+                && (!check_matches.is_empty() || self.config.is_rule_no_check(rule_id))
             {
                 for name in purge_matches {
                     if !matches.contains_key(*name) {
-                        matches.insert(name.to_string(), project_id);
+                        matches.insert(name.to_string(), rule_id);
                     }
                 }
             }
@@ -140,7 +140,7 @@ mod tests {
         };
         ($id:literal, $names:expr, $matched:expr) => {
             let mut config = Config::default();
-            let ret = config.add_project($id);
+            let ret = config.add_rule($id);
             assert!(ret.is_ok());
             let mut checker = Checker::new(&config);
             for name in $names {

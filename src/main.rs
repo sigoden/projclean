@@ -23,8 +23,8 @@ fn start() -> Result<()> {
 
     let config = init_config(&matches)?;
 
-    if matches.is_present("list_projects") {
-        config.list_projects()?;
+    if matches.is_present("list_rules") {
+        config.list_rules()?;
         return Ok(());
     }
 
@@ -59,18 +59,19 @@ fn command() -> Command<'static> {
                 .help("List found targets"),
         )
         .arg(
-            Arg::new("list_projects")
-                .short('l')
-                .long("list-projects")
-                .help("List current project rules"),
+            Arg::new("list_rules")
+                .short('L')
+                .long("list-rules")
+                .help("List current rules"),
         )
         .arg(
-            Arg::new("project")
-                .short('p')
-                .long("project")
-                .value_name("PROJECT")
-                .help("Add a project rule")
+            Arg::new("rule")
+                .short('r')
+                .long("rule")
+                .value_name("RULE")
+                .help("Add a search rule")
                 .takes_value(true)
+                .multiple_occurrences(true)
                 .multiple_values(true),
         )
         .arg(
@@ -78,7 +79,7 @@ fn command() -> Command<'static> {
                 .short('f')
                 .long("file")
                 .value_name("FILE")
-                .help("Load project rules from <FILE>")
+                .help("Load rules from <FILE>")
                 .allow_invalid_utf8(true)
                 .takes_value(true),
         )
@@ -101,20 +102,20 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
             )
         })?;
         let mut config = Config::default();
-        config.add_projects_from_file(&content)?;
+        config.load_rules_from_file(&content)?;
         config
     } else {
         Config::default()
     };
 
-    if let Some(values) = matches.values_of("project") {
+    if let Some(values) = matches.values_of("rule") {
         for value in values {
-            config.add_project(value)?;
+            config.add_rule(value)?;
         }
     }
 
-    if config.projects.is_empty() {
-        config.add_default_projects();
+    if config.rules.is_empty() {
+        config.add_default_rules();
     }
 
     Ok(config)
