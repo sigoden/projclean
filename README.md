@@ -5,10 +5,9 @@
 
 Find and clean heavy build or cache directories. 
 
-ProjClean finds directories such as node_modules(node), target(rust), build(java) and their storage space for you, so you can easily clean them up.
+ProjClean finds directories such as node_modules(node), target(rust), build(java) and their storage space for you, so you can easily inspect or clean.
 
 ![screenshot](https://user-images.githubusercontent.com/4012553/157594166-74ea021b-2661-4799-993e-b3d80f369f4d.gif)
-
 
 ## Install
 
@@ -22,22 +21,40 @@ cargo install projclean
 
 Download from [Github Releases](https://github.com/sigoden/projclean/releases), unzip and add projclean to your $PATH.
 
-## Project Rule
+## Rule
 
-ProjClean finds target folders according to project rule.
+ProjClean finds target folder according to project rule.
 
-Each project rule consist of three parts.
+Each project rule consist of:
+
 ```
-<target name>[;feature file][;project name]
+<target>[;flag][;name]
 ```
-- target name: the name of the directory or file to be cleaned, a required field, and supports regular expressions.
-- feature file: a file unique to the project, optional, supports regularization.
-- project name: a remark, optional.
+- target: folders to be searched, e.g. `node_modules`, `^(build|dist)$`
+- flag: specific file to a specific project, e.g. `Cargo.toml` to rust, `build.gradle` to java or `\.sln$` to vs.
+- name: rule name.
 
-If you simply pass the directory name, you may find a lot of irrelevant directories.
-It is more accurate to specify a project using a feature file, requiring that the directory must be in the project.
+The flag is used to filter out folders that are not in the project.
 
-The default project rules are:
+## Usage
+
+- Starting search from current directory
+
+```
+projclean
+```
+
+- Starting search from $HOME directory
+
+```
+projclean $HOME
+```
+
+- Print default rules
+
+```
+projclean -L
+```
 ```
 node_modules;;node
 target;Cargo.toml;rust
@@ -45,28 +62,37 @@ build;build.gradle;java
 ^(Debug|Release)$;\.sln$;vs
 ```
 
-You can set custom rule with `-p --project`.
+- Use custom rules
+
+Search tmp folder
 
 ```sh
-projclean -p dist -p '.next;;nextjs' -p '^(build|dist)$;package.json;js'
+projclean -r tmp
 ```
 
-You can also use a rules file
+Search build or dist folder belongs to js project
 
 ```sh
-echo dist > rules
-echo '.next;;nextjs' >> rules
-echo '^(build|dist)$;package.json;js' >> rules
+projclean -r '^(build|dist)$;package.json;js'
+# or
+projclean -r 'build;package.json;js' -r 'dist;packge.json;js'
+```
+
+- Load custom rules from file
+
+You can write the rules to a file for reuse.
+
+```sh
+projclean -L > rules
+echo 'build;pom.xml;java' >> rules
 projclean -f rules
 ```
 
-Other options are used as follows:
+- List found targets only, do not enter tui
 
 ```sh
-projclean                    # Find from current directory
-projclean $HOME              # Find from $HOME directory
-projclean -l                 # Print project rules
-projclean -t                 # Print the matching directory directly (without entering tui)
+projclean -t
+projclean -t | xargs rm -rf
 ```
 
 ## License
