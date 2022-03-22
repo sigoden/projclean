@@ -21,21 +21,6 @@ cargo install projclean
 
 Download from [Github Releases](https://github.com/sigoden/projclean/releases), unzip and add projclean to your $PATH.
 
-## Rule
-
-ProjClean finds target folder according to project rule.
-
-Each project rule consist of:
-
-```
-<target>[;flag][;name]
-```
-- target: folders to be searched, e.g. `node_modules`, `^(build|dist)$`
-- flag: specific file to a specific project, e.g. `Cargo.toml` to rust, `build.gradle` to java or `\.sln$` to vs.
-- name: rule name.
-
-The flag is used to filter out folders that are not in the project.
-
 ## Usage
 
 - Starting search from current directory
@@ -94,6 +79,21 @@ projclean -f rules
 projclean -t
 projclean -t | xargs rm -rf
 ```
+
+## Rule
+
+ProjClean finds target folders according to project rule.
+
+Each project rule consist of:
+
+```
+<target>[;flag][;name]
+```
+- target: folders to be searched, e.g. `node_modules`, `^(build|dist)$`
+- flag: specific file to a specific project, e.g. `Cargo.toml` to rust, `build.gradle` to java or `\.sln$` to vs.
+- name: rule/project name.
+
+The flag is used to filter out target folders that are not in the project.
 
 ## License
 
