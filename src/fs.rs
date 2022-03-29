@@ -35,17 +35,17 @@ pub fn search(entry: PathBuf, config: Config, tx: Sender<Message>) -> Result<()>
                 let path = dir_entry.path();
                 let size = du(&path).ok();
                 let relative_path = path.strip_prefix(&entry)?.to_path_buf();
-                tx.send(Message::AddPath(PathItem::new(
+                let _ = tx.send(Message::AddPath(PathItem::new(
                     path,
                     relative_path,
                     size,
                     kind.clone(),
-                )))?;
+                )));
             }
         }
     }
 
-    tx.send(Message::DoneSearch)?;
+    let _ = tx.send(Message::DoneSearch);
 
     Ok(())
 }
