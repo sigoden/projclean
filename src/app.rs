@@ -124,8 +124,8 @@ fn run_ui<B: Backend>(
                             app.order_by_size();
                         }
                     }
-                    KeyCode::Char('d') => {
-                        if let Some(KeyCode::Char('a')) = app.last_keycode {
+                    KeyCode::Char('a') => {
+                        if let Some(KeyCode::Char('d')) = app.last_keycode {
                             for item in app.items.iter_mut() {
                                 if item.state == PathState::Normal && item.size.is_some() {
                                     item.state = PathState::StartDeleting;
