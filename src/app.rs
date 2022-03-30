@@ -124,6 +124,29 @@ fn run_ui<B: Backend>(
                             app.order_by_size();
                         }
                     }
+                    KeyCode::Char('a') => {
+                        if let Some(KeyCode::Char('d')) = app.last_keycode {
+                            for item in app.items.iter_mut() {
+                                if item.state == PathState::Normal && item.size.is_some() {
+                                    item.state = PathState::StartDeleting;
+                                    let item_path = item.path.clone();
+                                    let sender = tx.clone();
+                                    thread::spawn(move || match remove_dir_all(&item_path) {
+                                        Ok(_) => {
+                                            sender.send(Message::SetPathDeleted(item_path)).unwrap()
+                                        }
+                                        Err(err) => sender
+                                            .send(Message::PutError(format!(
+                                                "Cannot delete '{}', {}",
+                                                item_path.display(),
+                                                err
+                                            )))
+                                            .unwrap(),
+                                    });
+                                }
+                            }
+                        }
+                    }
                     KeyCode::Char(' ') => {
                         if let Some(path) = app.start_deleting_item() {
                             let sender = tx.clone();
@@ -287,6 +310,7 @@ fn draw_help_view<B: Backend>(f: &mut Frame<B>, area: Rect) {
         ["Move to the top", "gg | <home> "],
         ["Move to the bottom", "G  | <end> "],
         ["Delete selected folder", "   | <space> "],
+        ["Delete all listed folder", "da"],
         ["Sort by path", "op"],
         ["Sort by size", "os"],
         ["Exit", "q  | <ctrl+c>"],
