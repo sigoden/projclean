@@ -3,7 +3,7 @@
 [![CI](https://github.com/sigoden/projclean/actions/workflows/ci.yaml/badge.svg)](https://github.com/sigoden/projclean/actions/workflows/ci.yaml)
 [![Crates](https://img.shields.io/crates/v/projclean.svg)](https://crates.io/crates/projclean)
 
-Project cache finder and cleaner.
+Projclean: find and clean project build/cache.
 
 ![screenshot](https://user-images.githubusercontent.com/4012553/172361654-5fa36424-10da-4c52-b84a-f44c27cb1a17.gif)
 
@@ -53,7 +53,7 @@ Find node_modules folders starting from $HOME.
 projclean $HOME -r node_modules
 ```
 
-Find node_modules folders and rust target folders
+Find node_modules folders and rust target folders.
 
 ```
 projclean $HOME -r node_modules -r target@Cargo.toml
@@ -90,13 +90,14 @@ Run `projclean -r target@Cargo.toml` will find  `projA/target` only.
 
 ## Project
 
-Below is a collection of rule of common porjects:
+|         |                                                             |
+| ------- | ----------------------------------------------------------- |
+| js      | `projclean -r node_modules`                                 |
+| rs      | `projclean -r target@Cargo.toml`                            |
+| vs      | `projclean -r '^(Debug\|Release)$@\.sln$'`                  |
+| ios     | `projclean -r '^(build\|xcuserdata\|DerivedData)$@Podfile'` |
+| android | `projclean -r build@build.gradle`                           |
 
-- js: `node_modules`
-- rs: `target@Cargo.toml`
-- vs: `^(Debug|Release)$@\.sln$`
-- ios: `^(build|xcuserdata|DerivedData)$@Podfile`
-- android: `build@build.gradle`
 
 ## License
 
