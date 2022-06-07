@@ -22,7 +22,7 @@ Download from [Github Releases](https://github.com/sigoden/projclean/releases), 
 ## Cli
 
 ```
-USAGE:
+SAGE:
     projclean [OPTIONS] [--] [PATH]
 
 ARGS:
@@ -33,25 +33,24 @@ OPTIONS:
     -r, --rule <RULE>...    Add a search rule
     -t, --list-targets      List found targets and exit
     -V, --version           Print version information
-sigo ~/w/projclean$ 
 ```
 
-Find node_modules folders
+Find node_modules folders.
 
 ```
 projclean -r node_modules
 ```
 
-Find target folders for rust project
-
-```
-projclean -r target@Cargo.toml
-```
-
-Find node_modules folders then print
+Find node_modules folders then print.
 
 ```
 projclean -r node_modules -t
+```
+
+Find node_modules folders starting from $HOME.
+
+```
+projclean -r node_modules $HOME
 ```
 
 ## Rule
