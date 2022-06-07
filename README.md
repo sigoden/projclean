@@ -3,7 +3,7 @@
 [![CI](https://github.com/sigoden/projclean/actions/workflows/ci.yaml/badge.svg)](https://github.com/sigoden/projclean/actions/workflows/ci.yaml)
 [![Crates](https://img.shields.io/crates/v/projclean.svg)](https://crates.io/crates/projclean)
 
-Projclean: find and clean project build/cache for saving disk or making backups/rsync easier.
+Projects cache/build finder and cleaner. For saving disk or making backups/rsync easier.
 
 ![screenshot](https://user-images.githubusercontent.com/4012553/172361654-5fa36424-10da-4c52-b84a-f44c27cb1a17.gif)
 
@@ -90,8 +90,8 @@ Run `projclean -r target@Cargo.toml` will find  `projA/target` only.
 
 ## Project
 
-| project | command                                                     |
-| ------- | ----------------------------------------------------------- |
+| name    | command                                                     |
+| :------ | :---------------------------------------------------------- |
 | js      | `projclean -r node_modules`                                 |
 | rs      | `projclean -r target@Cargo.toml`                            |
 | vs      | `projclean -r '^(Debug\|Release)$@\.sln$'`                  |
