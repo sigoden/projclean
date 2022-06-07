@@ -7,7 +7,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use crate::{Config, Message, PathItem};
 
 pub fn search(entry: PathBuf, config: Config, tx: Sender<Message>) -> Result<()> {
-    let walk_dir = WalkDirGeneric::<((), Option<Option<String>>)>::new(entry.clone())
+    let walk_dir = WalkDirGeneric::<((), Option<()>)>::new(entry.clone())
         .skip_hidden(false)
         .process_read_dir(move |_depth, _path, _state, children| {
             let mut checker = Checker::new(&config);
@@ -20,9 +20,9 @@ pub fn search(entry: PathBuf, config: Config, tx: Sender<Message>) -> Result<()>
             children.iter_mut().for_each(|dir_entry_result| {
                 if let Ok(dir_entry) = dir_entry_result {
                     if let Some(name) = dir_entry.file_name.to_str() {
-                        if let Some(rule_id) = matches.get(name) {
+                        if matches.get(name).is_some() {
                             dir_entry.read_children_path = None;
-                            dir_entry.client_state = Some(config.get_rule_name(rule_id));
+                            dir_entry.client_state = Some(());
                         }
                     }
                 }
@@ -31,16 +31,11 @@ pub fn search(entry: PathBuf, config: Config, tx: Sender<Message>) -> Result<()>
 
     for dir_entry_result in walk_dir {
         if let Ok(dir_entry) = &dir_entry_result {
-            if let Some(kind) = dir_entry.client_state.as_ref() {
+            if let Some(()) = dir_entry.client_state.as_ref() {
                 let path = dir_entry.path();
                 let size = du(&path).ok();
                 let relative_path = path.strip_prefix(&entry)?.to_path_buf();
-                let _ = tx.send(Message::AddPath(PathItem::new(
-                    path,
-                    relative_path,
-                    size,
-                    kind.clone(),
-                )));
+                let _ = tx.send(Message::AddPath(PathItem::new(path, relative_path, size)));
             }
         }
     }
@@ -155,13 +150,13 @@ mod tests {
     #[test]
     fn test_match_paths() {
         assert_match_paths!(
-            "^target$;Cargo.toml;rust",
+            "^target$@Cargo.toml",
             &["target", "Cargo.toml"],
             &["target"]
         );
-        assert_match_paths!("target;Cargo.toml;rust", &["target.rs", "Cargo.toml"]);
+        assert_match_paths!("target@Cargo.toml", &["target.rs", "Cargo.toml"]);
         assert_match_paths!(
-            "^(Debug|Release)$;.*\\.sln;vs",
+            "^(Debug|Release)$@.*\\.sln",
             &["Debug", "Demo.sln"],
             &["Debug"]
         );

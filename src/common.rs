@@ -2,8 +2,6 @@ use std::path::PathBuf;
 
 /// storage space unit
 static UNITS: [char; 4] = ['T', 'G', 'M', 'K'];
-/// limit kind string to 16 chars
-const KIND_LIMIT_WIDTH: usize = 12;
 
 #[derive(Debug)]
 pub enum Message {
@@ -19,7 +17,6 @@ pub struct PathItem {
     pub relative_path: PathBuf,
     pub size: Option<u64>,
     pub size_text: String,
-    pub kind_text: String,
     pub state: PathState,
 }
 
@@ -31,36 +28,18 @@ pub enum PathState {
 }
 
 impl PathItem {
-    pub fn new(
-        path: PathBuf,
-        relative_path: PathBuf,
-        size: Option<u64>,
-        kind: Option<String>,
-    ) -> Self {
+    pub fn new(path: PathBuf, relative_path: PathBuf, size: Option<u64>) -> Self {
         let size_text = match size {
             Some(size) => format!("[{}]", human_readable_folder_size(size)),
             None => "[?]".to_string(),
-        };
-        let kind_text = match kind.as_ref() {
-            Some(kind) => format!("({})", truncate_kind(kind)),
-            None => "".to_string(),
         };
         PathItem {
             path,
             relative_path,
             size,
             size_text,
-            kind_text,
             state: PathState::Normal,
         }
-    }
-}
-
-fn truncate_kind(kind: &str) -> String {
-    if kind.len() <= KIND_LIMIT_WIDTH {
-        kind.to_string()
-    } else {
-        kind[0..KIND_LIMIT_WIDTH].to_string()
     }
 }
 

@@ -3,11 +3,9 @@
 [![CI](https://github.com/sigoden/projclean/actions/workflows/ci.yaml/badge.svg)](https://github.com/sigoden/projclean/actions/workflows/ci.yaml)
 [![Crates](https://img.shields.io/crates/v/projclean.svg)](https://crates.io/crates/projclean)
 
-Find and clean heavy build or cache directories. 
+Project cache finder and cleaner.
 
-ProjClean finds directories such as node_modules(node), target(rust), build(java) and their storage space for you, so you can easily inspect or clean.
-
-![screenshot](https://user-images.githubusercontent.com/4012553/157594166-74ea021b-2661-4799-993e-b3d80f369f4d.gif)
+![screenshot](https://user-images.githubusercontent.com/4012553/172361654-5fa36424-10da-4c52-b84a-f44c27cb1a17.gif)
 
 ## Install
 
@@ -21,79 +19,79 @@ cargo install projclean
 
 Download from [Github Releases](https://github.com/sigoden/projclean/releases), unzip and add projclean to your $PATH.
 
-## Usage
-
-- Starting search from current directory
+## Cli
 
 ```
-projclean
+USAGE:
+    projclean [OPTIONS] [--] [PATH]
+
+ARGS:
+    <PATH>    Start searching from
+
+OPTIONS:
+    -h, --help              Print help information
+    -r, --rule <RULE>...    Add a search rule
+    -t, --list-targets      List found targets and exit
+    -V, --version           Print version information
+sigo ~/w/projclean$ 
 ```
 
-- Starting search from $HOME directory
+Find node_modules folders
 
 ```
-projclean $HOME
+projclean -r node_modules
 ```
 
-- Print default rules
+Find target folders for rust project
 
 ```
-projclean -L
-```
-```
-node_modules;;node
-target;Cargo.toml;rust
-build;build.gradle;java
-^(Debug|Release)$;\.sln$;vs
+projclean -r target@Cargo.toml
 ```
 
-- Use custom rules
+Find node_modules folders then print
 
-Search tmp folder
-
-```sh
-projclean -r tmp
 ```
-
-Search build or dist folder belongs to js project
-
-```sh
-projclean -r '^(build|dist)$;package.json;js'
-# or
-projclean -r 'build;package.json;js' -r 'dist;packge.json;js'
-```
-
-- Load custom rules from file
-
-You can write the rules to a file for reuse.
-
-```sh
-projclean -L > rules
-echo 'build;pom.xml;java' >> rules
-projclean -f rules
-```
-
-- List found targets only, do not enter tui
-
-```sh
-projclean -t
-projclean -t | xargs rm -rf
+projclean -r node_modules -t
 ```
 
 ## Rule
 
-ProjClean finds target folders according to project rule.
+Projclean detect project and target folder according to rule.
 
-Each project rule consist of:
+Rule consist of two parts:
 
 ```
-<target>[;flag][;name]
+<target folder>[@flag file]
 ```
-- target: folders to be searched, e.g. `node_modules`, `^(build|dist)$`
-- flag: specific file to a specific project, e.g. `Cargo.toml` to rust, `build.gradle` to java or `\.sln$` to vs.
-- name: rule/project name.
 
-The flag is used to filter out target folders that are not in the project.
+> Both target folder and flag file can be regex.
+
+If flag file is provided, Only folders with flag files will be selected.
+
+For example. The current directory structure is as follows:
+
+```
+.
+├── projA
+│   ├── Cargo.toml
+│   └── target
+└── projB
+    └── target
+```
+
+Run `projclean -r target` will find both `projA/target` and `projB/target`.
+
+Run `projclean -r target@Cargo.toml` will find  `projA/target` only.
+
+## Project
+
+Below is a collection of rule of common porjects:
+
+- js: `node_modules`
+- rs: `target@Cargo.toml`
+- vs: `^(Debug|Release)$@\.sln$`
+- ios: `^(build|xcuserdata|DerivedData)$@Podfile`
+- android: `build@build.gradle`
 
 ## License
 

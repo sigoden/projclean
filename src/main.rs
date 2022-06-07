@@ -1,13 +1,13 @@
 use std::{
     env,
-    fs::{canonicalize, read_to_string},
+    fs::canonicalize,
     path::{Path, PathBuf},
     process,
     sync::mpsc::channel,
     thread,
 };
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use clap::{Arg, Command};
 use projclean::{ls, run, search, Config};
 
@@ -23,18 +23,13 @@ fn start() -> Result<()> {
 
     let config = init_config(&matches)?;
 
-    if matches.is_present("list_rules") {
-        config.list_rules()?;
-        return Ok(());
-    }
-
     let entry = set_working_dir(&matches)?;
 
     let (tx, rx) = channel();
     let tx2 = tx.clone();
     let handle = thread::spawn(move || search(entry, config, tx2));
 
-    if matches.is_present("list_targets") {
+    if matches.is_present("list-targets") {
         ls(rx)?;
     } else {
         run(rx, tx)?;
@@ -53,16 +48,10 @@ fn command() -> Command<'static> {
             env!("CARGO_PKG_REPOSITORY")
         ))
         .arg(
-            Arg::new("list_targets")
+            Arg::new("list-targets")
                 .short('t')
                 .long("list-targets")
-                .help("List found targets"),
-        )
-        .arg(
-            Arg::new("list_rules")
-                .short('L')
-                .long("list-rules")
-                .help("List current rules"),
+                .help("List found targets and exit"),
         )
         .arg(
             Arg::new("rule")
@@ -75,15 +64,6 @@ fn command() -> Command<'static> {
                 .multiple_values(true),
         )
         .arg(
-            Arg::new("file")
-                .short('f')
-                .long("file")
-                .value_name("FILE")
-                .help("Load rules from <FILE>")
-                .allow_invalid_utf8(true)
-                .takes_value(true),
-        )
-        .arg(
             Arg::new("entry")
                 .allow_invalid_utf8(true)
                 .value_name("PATH")
@@ -92,21 +72,7 @@ fn command() -> Command<'static> {
 }
 
 fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
-    let mut config = if let Some(config_file) = matches.value_of_os("file") {
-        let config_file = Path::new(config_file);
-        let content = read_to_string(config_file).map_err(|err| {
-            anyhow!(
-                "Cannot read config file '{}', {}",
-                config_file.display(),
-                err
-            )
-        })?;
-        let mut config = Config::default();
-        config.load_rules_from_file(&content)?;
-        config
-    } else {
-        Config::default()
-    };
+    let mut config = Config::default();
 
     if let Some(values) = matches.values_of("rule") {
         for value in values {
@@ -115,7 +81,7 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
     }
 
     if config.rules.is_empty() {
-        config.add_default_rules();
+        bail!("No search rules");
     }
 
     Ok(config)

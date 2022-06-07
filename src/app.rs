@@ -216,7 +216,7 @@ fn draw_list_view<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
                 .unwrap_or_default();
 
             let mut width = width;
-            width -= (item.kind_text.len() + item.size_text.len() + PATH_SEPARATE.len()) as u16;
+            width -= (item.size_text.len() + PATH_SEPARATE.len()) as u16;
             let mut styles = vec![
                 Style::default(),
                 Style::default(),
@@ -244,10 +244,6 @@ fn draw_list_view<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
             let separate_span = Span::styled(PATH_SEPARATE, styles[0]);
             let size_span = Span::styled(item.size_text.clone(), styles[1]);
             let mut spans = vec![path_span, separate_span, size_span];
-            if !item.kind_text.is_empty() {
-                let kind_span = Span::styled(item.kind_text.clone(), styles[2]);
-                spans.push(kind_span);
-            }
             spans.push(indicator_span);
             ListItem::new(Spans::from(spans))
         })

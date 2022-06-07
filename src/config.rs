@@ -5,8 +5,6 @@ use std::{
     str::FromStr,
 };
 
-const BUILTIN_RULES: &str = include_str!("default.csv");
-
 #[derive(Debug, Default)]
 pub struct Config {
     pub rules: Vec<Rule>,
@@ -49,41 +47,9 @@ impl Config {
         }
     }
 
-    pub fn get_rule_name(&self, id: &str) -> Option<String> {
-        if let Some(rule) = self.rules.iter().find(|rule| rule.id.as_str() == id) {
-            rule.name.clone()
-        } else {
-            None
-        }
-    }
-
-    pub fn add_default_rules(&mut self) {
-        self.load_rules_from_file(BUILTIN_RULES)
-            .expect("broken builtin config file");
-    }
-
-    pub fn load_rules_from_file(&mut self, content: &str) -> Result<()> {
-        for (index, line) in content.lines().enumerate() {
-            let line = line.trim();
-            if line.is_empty() {
-                continue;
-            }
-            self.add_rule(line)
-                .map_err(|_| anyhow!("Invalid rule '{}' at line {}", line, index + 1))?;
-        }
-        Ok(())
-    }
-
     pub fn add_rule(&mut self, value: &str) -> Result<()> {
         let rule: Rule = value.parse()?;
         self.rules.push(rule);
-        Ok(())
-    }
-
-    pub fn list_rules(&self) -> Result<()> {
-        for rule in &self.rules {
-            println!("{}", rule.id);
-        }
         Ok(())
     }
 }
@@ -93,7 +59,6 @@ pub struct Rule {
     id: String,
     purge: Regex,
     check: Option<Regex>,
-    name: Option<String>,
 }
 
 impl Rule {
@@ -117,12 +82,11 @@ impl FromStr for Rule {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<&str> = s.split(';').collect();
-        let (purge, check, name) = match parts.len() {
-            1 => (parts[0].trim(), "", ""),
-            2 => (parts[0].trim(), parts[1].trim(), ""),
-            3 => (parts[0].trim(), parts[1].trim(), parts[2].trim()),
-            _ => ("", "", ""),
+        let parts: Vec<&str> = s.split('@').collect();
+        let (purge, check) = match parts.len() {
+            1 => (parts[0].trim(), ""),
+            2 => (parts[0].trim(), parts[1].trim()),
+            _ => ("", ""),
         };
         let err = || anyhow!("Invalid rule '{}'", s);
         if purge.is_empty() {
@@ -136,11 +100,6 @@ impl FromStr for Rule {
             } else {
                 let check = to_regex(check).map_err(|_| err())?;
                 Some(check)
-            },
-            name: if name.is_empty() {
-                None
-            } else {
-                Some(name.to_string())
             },
         })
     }
@@ -170,7 +129,7 @@ mod tests {
         assert!(!rule.test_purge("target-"));
         assert!(!rule.test_purge("Target"));
 
-        let rule: Rule = "^(Debug|Release)$;\\.sln$".parse().unwrap();
+        let rule: Rule = "^(Debug|Release)$@\\.sln$".parse().unwrap();
         assert!(rule.test_purge("Debug"));
         assert!(!rule.test_purge("Debug-"));
         assert!(!rule.test_purge("-Debug"));
