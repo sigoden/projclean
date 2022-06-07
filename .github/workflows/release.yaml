@@ -6,8 +6,10 @@ on:
     - v[0-9]+.[0-9]+.[0-9]+*
 
 jobs:
-  all:
-    name: All
+  release:
+    name: Publish to Github Reelases
+    outputs:
+      rc: ${{ steps.check-tag.outputs.rc }}
 
     strategy:
       matrix:
@@ -124,3 +126,20 @@ jobs:
         prerelease: ${{ steps.check-tag.outputs.rc == 'true' }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-crate:
+    name: Publish to crates.io
+    if: ${{ needs.release.outputs.rc == 'false' }}
+    runs-on: ubuntu-latest
+    needs: release
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+      - name: Publish
+
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
+        run: cargo publish
