@@ -50,7 +50,13 @@ projclean -r node_modules -t
 Find node_modules folders starting from $HOME.
 
 ```
-projclean -r node_modules $HOME
+projclean $HOME -r node_modules
+```
+
+Find node_modules folders and rust target folders
+
+```
+projclean $HOME -r node_modules -r target@Cargo.toml
 ```
 
 ## Rule
