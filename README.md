@@ -3,7 +3,7 @@
 [![CI](https://github.com/sigoden/projclean/actions/workflows/ci.yaml/badge.svg)](https://github.com/sigoden/projclean/actions/workflows/ci.yaml)
 [![Crates](https://img.shields.io/crates/v/projclean.svg)](https://crates.io/crates/projclean)
 
-Projects cache/build finder and cleaner. For saving disk or making backups/rsync easier.
+ Globally find and clean projects cache/build for saving disk space or making backups/rsync easier.
 
 ![screenshot](https://user-images.githubusercontent.com/4012553/172361654-5fa36424-10da-4c52-b84a-f44c27cb1a17.gif)
 
