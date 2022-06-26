@@ -9,7 +9,7 @@ Project non-essential files cleaner.
 
 ## Why
 
-- **Save space**: Get rid of old, dusty and unnecessary project directories that contains dependencies, caches or builds.
+- **Save space**: Cleans unnecessary directories and files.
 - **Very fast**: Written in rust, optimized for concurrency.
 - **Easy to use**: A tui listing all found targets and pressing `<space>` to get rid of them.
 - **Minified**: single executable file, no dependencies, no installation.
@@ -26,7 +26,7 @@ cargo install projclean
 
 Download from [Github Releases](https://github.com/sigoden/projclean/releases), unzip and add projclean to your $PATH.
 
-## Cli
+## CLI
 
 ```
 SAGE:
@@ -60,7 +60,7 @@ Find node_modules folders and rust target folders.
 projclean -r node_modules -r target@Cargo.toml
 ```
 
-## Search rule
+## Rule
 
 Projclean find targets according search rule.
 
@@ -70,7 +70,7 @@ Rule consist of two parts:
 <target-folder>[@flag-file]
 ```
 
-> Both target-folder and flag file can be regex.
+> Both target folder and flag file can be plain text or regex.
 
 Flag file is used to filter out folders that match only names but not projects.
  
@@ -101,6 +101,8 @@ $ projclean -t -r target@Cargo.toml
 ```
 
 ## Projects
+
+Common search rules for common projects:
 
 | name    | command                                           |
 | :------ | :------------------------------------------------ |
