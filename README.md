@@ -3,9 +3,16 @@
 [![CI](https://github.com/sigoden/projclean/actions/workflows/ci.yaml/badge.svg)](https://github.com/sigoden/projclean/actions/workflows/ci.yaml)
 [![Crates](https://img.shields.io/crates/v/projclean.svg)](https://crates.io/crates/projclean)
 
-Globally find and clean projects cache/build for saving disk space or making backups/rsync easier.
+Project non-essential files cleaner. 
 
 ![screenshot](https://user-images.githubusercontent.com/4012553/172361654-5fa36424-10da-4c52-b84a-f44c27cb1a17.gif)
+
+## Why projclean
+
+- **Save space**: Get rid of old, dusty and unnecessary project directories that contains dependencies, caches or builds.
+- **Very fast**: Written in rust, optimized for concurrency.
+- **Easy to use**: A tui listing all found targets and pressing `<space>` to get rid of them.
+- **Minified**: single executable file, no dependencies, no installation.
 
 ## Install
 
@@ -97,13 +104,15 @@ $ projclean -t -r target@Cargo.toml
 
 ### Common projects
 
-| name    | command                                                     |
-| :------ | :---------------------------------------------------------- |
-| js      | `node_modules`                                 |
-| rs      | `target@Cargo.toml`                            |
-| vs      | `'^(Debug\|Release)$@\.sln$'`                  |
-| ios     | `'^(build\|xcuserdata\|DerivedData)$@Podfile'` |
-| android | `build@build.gradle`                           |
+| name    | command                                           |
+| :------ | :------------------------------------------------ |
+| js      | `-r node_modules`                                 |
+| rs      | `-r target@Cargo.toml`                            |
+| vs      | `-r '^(Debug\|Release)$@\.sln$'`                  |
+| ios     | `-r '^(build\|xcuserdata\|DerivedData)$@Podfile'` |
+| android | `-r build@build.gradle`                           |
+| java    | `-r target@pom.xml`                               |
+| php     | `-r vendor@composer.json`                         |
 
 ## License
 
