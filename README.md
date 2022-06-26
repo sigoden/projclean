@@ -7,7 +7,7 @@ Project non-essential files cleaner.
 
 ![screenshot](https://user-images.githubusercontent.com/4012553/172361654-5fa36424-10da-4c52-b84a-f44c27cb1a17.gif)
 
-## Why projclean
+## Why
 
 - **Save space**: Get rid of old, dusty and unnecessary project directories that contains dependencies, caches or builds.
 - **Very fast**: Written in rust, optimized for concurrency.
@@ -72,9 +72,7 @@ Rule consist of two parts:
 
 > Both target-folder and flag file can be regex.
 
-### Flag file
-
-Flags file is used to filter out folders that match only names but not projects.
+Flag file is used to filter out folders that match only names but not projects.
  
 E.g. The directory has the following contents:
 
@@ -102,7 +100,7 @@ $ projclean -t -r target@Cargo.toml
 /tmp/demo/rust-proj/target
 ```
 
-### Common projects
+## Projects
 
 | name    | command                                           |
 | :------ | :------------------------------------------------ |
