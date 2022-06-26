@@ -2,11 +2,18 @@ use anyhow::Result;
 use jwalk::WalkDirGeneric;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
+use std::sync::Arc;
 
 use crate::{Config, Message, PathItem};
 
-pub fn search(entry: PathBuf, config: Config, tx: Sender<Message>) -> Result<()> {
+pub fn search(
+    entry: PathBuf,
+    config: Config,
+    tx: Sender<Message>,
+    running: Arc<AtomicBool>,
+) -> Result<()> {
     let walk_dir = WalkDirGeneric::<((), Option<()>)>::new(entry.clone())
         .skip_hidden(false)
         .process_read_dir(move |_depth, _path, _state, children| {
@@ -30,6 +37,10 @@ pub fn search(entry: PathBuf, config: Config, tx: Sender<Message>) -> Result<()>
         });
 
     for dir_entry_result in walk_dir {
+        if !running.load(Ordering::SeqCst) {
+            let _ = tx.send(Message::DoneSearch);
+            return Ok(());
+        }
         if let Ok(dir_entry) = &dir_entry_result {
             if let Some(()) = dir_entry.client_state.as_ref() {
                 let path = dir_entry.path();

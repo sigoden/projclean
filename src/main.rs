@@ -8,7 +8,11 @@ use std::{
     fs::canonicalize,
     path::{Path, PathBuf},
     process,
-    sync::mpsc::channel,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc::channel,
+        Arc,
+    },
     thread,
 };
 
@@ -22,13 +26,20 @@ use fs::{ls, search};
 use common::{human_readable_folder_size, Message, PathItem, PathState};
 
 fn main() {
-    if let Err(err) = start() {
+    let running = Arc::new(AtomicBool::new(true));
+    let running2 = running.clone();
+    ctrlc::set_handler(move || {
+        running2.store(false, Ordering::SeqCst);
+    })
+    .expect("Error setting Ctrl-C handler");
+
+    if let Err(err) = start(running) {
         eprintln!("{}", err);
         process::exit(1);
     }
 }
 
-fn start() -> Result<()> {
+fn start(running: Arc<AtomicBool>) -> Result<()> {
     let matches = command().get_matches();
 
     let config = init_config(&matches)?;
@@ -37,14 +48,14 @@ fn start() -> Result<()> {
 
     let (tx, rx) = channel();
     let tx2 = tx.clone();
-    let handle = thread::spawn(move || search(entry, config, tx2));
+
+    thread::spawn(move || search(entry, config, tx2, running));
 
     if matches.is_present("targets") {
         ls(rx)?;
     } else {
         run(rx, tx)?;
     }
-    handle.join().unwrap()?;
     Ok(())
 }
 
