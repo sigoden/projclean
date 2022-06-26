@@ -3,7 +3,7 @@
 [![CI](https://github.com/sigoden/projclean/actions/workflows/ci.yaml/badge.svg)](https://github.com/sigoden/projclean/actions/workflows/ci.yaml)
 [![Crates](https://img.shields.io/crates/v/projclean.svg)](https://crates.io/crates/projclean)
 
- Globally find and clean projects cache/build for saving disk space or making backups/rsync easier.
+Globally find and clean projects cache/build for saving disk space or making backups/rsync easier.
 
 ![screenshot](https://user-images.githubusercontent.com/4012553/172361654-5fa36424-10da-4c52-b84a-f44c27cb1a17.gif)
 
@@ -31,7 +31,7 @@ ARGS:
 OPTIONS:
     -h, --help              Print help information
     -r, --rule <RULE>...    Add a search rule
-    -t, --list-targets      List found targets and exit
+    -t, --targets           Print found target
     -V, --version           Print version information
 ```
 
@@ -39,12 +39,6 @@ Find node_modules folders.
 
 ```
 projclean -r node_modules
-```
-
-Find node_modules folders then print.
-
-```
-projclean -r node_modules -t
 ```
 
 Find node_modules folders starting from $HOME.
@@ -56,48 +50,60 @@ projclean $HOME -r node_modules
 Find node_modules folders and rust target folders.
 
 ```
-projclean $HOME -r node_modules -r target@Cargo.toml
+projclean -r node_modules -r target@Cargo.toml
 ```
 
-## Rule
+## Search rule
 
-Projclean detect project and target folder according to rule.
+Projclean find targets according search rule.
 
 Rule consist of two parts:
 
 ```
-<target folder>[@flag file]
+<target-folder>[@flag-file]
 ```
 
-> Both target folder and flag file can be regex.
+> Both target-folder and flag file can be regex.
 
-If flag file is provided, Only folders with flag files will be selected.
+### Flag file
 
-For example. The current directory structure is as follows:
+Flags file is used to filter out folders that match only names but not projects.
+ 
+E.g. The directory has the following contents:
 
 ```
 .
-├── projA
-│   ├── Cargo.toml
+├── misc-proj
 │   └── target
-└── projB
+└── rust-proj
+    ├── Cargo.toml
     └── target
 ```
 
-Run `projclean -r target` will find both `projA/target` and `projB/target`.
+Rule `target` found all `target` folders 
 
-Run `projclean -r target@Cargo.toml` will find  `projA/target` only.
+```
+$ projclean -t -r target
+/tmp/demo/rust-proj/target
+/tmp/demo/misc-proj/target
+```
 
-## Project
+Rule `target@Cargo.toml` found `target` folders belongs the rust project.
+
+```
+$ projclean -t -r target@Cargo.toml
+/tmp/demo/rust-proj/target
+```
+
+### Common projects
 
 | name    | command                                                     |
 | :------ | :---------------------------------------------------------- |
-| js      | `projclean -r node_modules`                                 |
-| rs      | `projclean -r target@Cargo.toml`                            |
-| vs      | `projclean -r '^(Debug\|Release)$@\.sln$'`                  |
-| ios     | `projclean -r '^(build\|xcuserdata\|DerivedData)$@Podfile'` |
-| android | `projclean -r build@build.gradle`                           |
-
+| js      | `node_modules`                                 |
+| rs      | `target@Cargo.toml`                            |
+| vs      | `'^(Debug\|Release)$@\.sln$'`                  |
+| ios     | `'^(build\|xcuserdata\|DerivedData)$@Podfile'` |
+| android | `build@build.gradle`                           |
 
 ## License
 

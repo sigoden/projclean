@@ -1,3 +1,8 @@
+mod app;
+mod common;
+mod config;
+mod fs;
+
 use std::{
     env,
     fs::canonicalize,
@@ -9,7 +14,12 @@ use std::{
 
 use anyhow::{anyhow, bail, Context, Result};
 use clap::{Arg, Command};
-use projclean::{ls, run, search, Config};
+
+use app::run;
+use config::Config;
+use fs::{ls, search};
+
+use common::{human_readable_folder_size, Message, PathItem, PathState};
 
 fn main() {
     if let Err(err) = start() {
@@ -29,7 +39,7 @@ fn start() -> Result<()> {
     let tx2 = tx.clone();
     let handle = thread::spawn(move || search(entry, config, tx2));
 
-    if matches.is_present("list-targets") {
+    if matches.is_present("targets") {
         ls(rx)?;
     } else {
         run(rx, tx)?;
@@ -48,10 +58,10 @@ fn command() -> Command<'static> {
             env!("CARGO_PKG_REPOSITORY")
         ))
         .arg(
-            Arg::new("list-targets")
+            Arg::new("targets")
                 .short('t')
-                .long("list-targets")
-                .help("List found targets and exit"),
+                .long("targets")
+                .help("Print found target"),
         )
         .arg(
             Arg::new("rule")

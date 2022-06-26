@@ -1,9 +1,6 @@
 use anyhow::{anyhow, Error, Result};
 use regex::Regex;
-use std::{
-    collections::{HashMap, HashSet},
-    str::FromStr,
-};
+use std::str::FromStr;
 
 #[derive(Debug, Default)]
 pub struct Config {
@@ -11,34 +8,6 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn find_rule(&self, name: &str) -> Option<&Rule> {
-        self.rules.iter().find(|rule| {
-            rule.check
-                .as_ref()
-                .map(|check| check.as_str() == name)
-                .unwrap_or(true)
-        })
-    }
-    pub fn match_patch<'a, 'b>(
-        &'a self,
-        matches: &mut HashMap<&'a str, (HashSet<&'b str>, HashSet<&'b str>)>,
-        name: &'b str,
-    ) {
-        for rule in &self.rules {
-            let (purge_matches, check_matches) = matches.entry(&rule.id).or_default();
-            if rule.test_purge(name) {
-                purge_matches.insert(name);
-            }
-            if rule.test_check(name) {
-                check_matches.insert(name);
-            }
-        }
-    }
-
-    pub fn is_empty_rules(&self) -> bool {
-        self.rules.is_empty()
-    }
-
     pub fn is_rule_no_check(&self, id: &str) -> bool {
         if let Some(rule) = self.rules.iter().find(|rule| rule.id.as_str() == id) {
             rule.check.is_none()
