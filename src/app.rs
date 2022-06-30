@@ -99,6 +99,8 @@ fn run_ui<B: Backend>(
 
         if crossterm::event::poll(timeout)? {
             if let Event::Key(key) = event::read()? {
+                let mut set_last_code = true;
+
                 app.clear_tmp_state();
 
                 match key.code {
@@ -112,59 +114,42 @@ fn run_ui<B: Backend>(
                     KeyCode::Char('g') => {
                         if let Some(KeyCode::Char('g')) = app.last_keycode {
                             app.begin();
+                            set_last_code = false;
                         }
                     }
                     KeyCode::Char('p') => {
                         if let Some(KeyCode::Char('o')) = app.last_keycode {
                             app.order_by_path();
+                            set_last_code = false;
                         }
                     }
                     KeyCode::Char('s') => {
                         if let Some(KeyCode::Char('o')) = app.last_keycode {
                             app.order_by_size();
+                            set_last_code = false;
+                        }
+                    }
+                    KeyCode::Char('d') => {
+                        if let Some(KeyCode::Char('d')) = app.last_keycode {
+                            app.delete_item(tx.clone());
+                            set_last_code = false;
                         }
                     }
                     KeyCode::Char('a') => {
                         if let Some(KeyCode::Char('d')) = app.last_keycode {
-                            for item in app.items.iter_mut() {
-                                if item.state == PathState::Normal && item.size.is_some() {
-                                    item.state = PathState::StartDeleting;
-                                    let item_path = item.path.clone();
-                                    let sender = tx.clone();
-                                    thread::spawn(move || match remove_dir_all(&item_path) {
-                                        Ok(_) => {
-                                            sender.send(Message::SetPathDeleted(item_path)).unwrap()
-                                        }
-                                        Err(err) => sender
-                                            .send(Message::PutError(format!(
-                                                "Cannot delete '{}', {}",
-                                                item_path.display(),
-                                                err
-                                            )))
-                                            .unwrap(),
-                                    });
-                                }
-                            }
+                            app.delete_all_items(tx.clone());
+                            set_last_code = false;
                         }
                     }
                     KeyCode::Char(' ') => {
-                        if let Some(path) = app.start_deleting_item() {
-                            let sender = tx.clone();
-                            thread::spawn(move || match remove_dir_all(&path) {
-                                Ok(_) => sender.send(Message::SetPathDeleted(path)).unwrap(),
-                                Err(err) => sender
-                                    .send(Message::PutError(format!(
-                                        "Cannot delete '{}', {}",
-                                        path.display(),
-                                        err
-                                    )))
-                                    .unwrap(),
-                            });
-                        }
+                        app.delete_item(tx.clone());
+                        app.last_keycode = None;
                     }
                     _ => {}
                 }
-                app.last_keycode = Some(key.code);
+                if set_last_code {
+                    app.last_keycode = Some(key.code);
+                }
             }
         }
 
@@ -305,7 +290,7 @@ fn draw_help_view<B: Backend>(f: &mut Frame<B>, area: Rect) {
         ["Move selection down", "j  | <down> "],
         ["Move to the top", "gg | <home> "],
         ["Move to the bottom", "G  | <end> "],
-        ["Delete selected folder", "   | <space> "],
+        ["Delete selected folder", "dd | <space> "],
         ["Delete all listed folder", "da"],
         ["Sort by path", "op"],
         ["Sort by size", "os"],
@@ -409,6 +394,21 @@ impl App {
         self.items.push(item);
     }
 
+    fn delete_item(&mut self, sender: Sender<Message>) {
+        if let Some(path) = self.start_deleting_item() {
+            spawn_delete_path(path, sender);
+        }
+    }
+
+    fn delete_all_items(&mut self, sender: Sender<Message>) {
+        for item in self.items.iter_mut() {
+            if item.state == PathState::Normal && item.size.is_some() {
+                item.state = PathState::StartDeleting;
+                spawn_delete_path(item.path.clone(), sender.clone());
+            }
+        }
+    }
+
     fn start_deleting_item(&mut self) -> Option<PathBuf> {
         if let Some(index) = self.state.selected() {
             let item = &mut self.items[index];
@@ -461,4 +461,17 @@ fn truncate_path(path: &Path, width: u16) -> String {
         &path[0..preserve_len],
         &path[(len - width + preserve_len + 3)..]
     )
+}
+
+fn spawn_delete_path(path: PathBuf, sender: Sender<Message>) {
+    thread::spawn(move || match remove_dir_all(&path) {
+        Ok(_) => sender.send(Message::SetPathDeleted(path)).unwrap(),
+        Err(err) => sender
+            .send(Message::PutError(format!(
+                "Cannot delete '{}', {}",
+                path.display(),
+                err
+            )))
+            .unwrap(),
+    });
 }
