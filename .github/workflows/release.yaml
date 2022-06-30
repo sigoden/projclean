@@ -7,32 +7,43 @@ on:
 
 jobs:
   release:
-    name: Publish to Github Reelases
+    name: Publish to Github Relases
     outputs:
       rc: ${{ steps.check-tag.outputs.rc }}
 
     strategy:
       matrix:
-        target:
-        - aarch64-unknown-linux-musl
-        - aarch64-apple-darwin
-        - x86_64-apple-darwin
-        - x86_64-pc-windows-msvc
-        - x86_64-unknown-linux-musl
         include:
         - target: aarch64-unknown-linux-musl
           os: ubuntu-latest
           use-cross: true
+          cargo-flags: ""
         - target: aarch64-apple-darwin
           os: macos-latest
           use-cross: true
+          cargo-flags: ""
+        - target: aarch64-pc-windows-msvc
+          os: windows-latest
+          use-cross: true
+          cargo-flags: ""
         - target: x86_64-apple-darwin
           os: macos-latest
+          cargo-flags: ""
         - target: x86_64-pc-windows-msvc
           os: windows-latest
+          cargo-flags: ""
         - target: x86_64-unknown-linux-musl
           os: ubuntu-latest
           use-cross: true
+          cargo-flags: ""
+        - target: i686-unknown-linux-musl
+          os: ubuntu-latest
+          use-cross: true
+          cargo-flags: ""
+        - target: i686-pc-windows-msvc
+          os: windows-latest
+          use-cross: true
+          cargo-flags: ""
 
     runs-on: ${{matrix.os}}
 
@@ -59,14 +70,7 @@ jobs:
         target: ${{ matrix.target }}
         toolchain: stable
         profile: minimal # minimal component installation (ie, no documentation)
-
-    - name: Install prerequisites
-      shell: bash
-      run: |
-        case ${{ matrix.target }} in
-          aarch64-unknown-linux-musl) sudo apt-get -y update ; sudo apt-get -y install gcc-aarch64-linux-gnu ;;
-        esac
-
+  
     - name: Show Version Information (Rust, cargo, GCC)
       shell: bash
       run: |
@@ -82,7 +86,7 @@ jobs:
       with:
         use-cross: ${{ matrix.use-cross }}
         command: build
-        args: --locked --release --target=${{ matrix.target }}
+        args: --locked --release --target=${{ matrix.target }} ${{ matrix.cargo-flags }}
 
     - name: Build Archive
       shell: bash
