@@ -3,7 +3,7 @@
 [![CI](https://github.com/sigoden/projclean/actions/workflows/ci.yaml/badge.svg)](https://github.com/sigoden/projclean/actions/workflows/ci.yaml)
 [![Crates](https://img.shields.io/crates/v/projclean.svg)](https://crates.io/crates/projclean)
 
-Project non-essential files cleaner. 
+Find and clean dependencies & builds from software projects to saving space or making backup easier.
 
 ![screenshot](https://user-images.githubusercontent.com/4012553/172361654-5fa36424-10da-4c52-b84a-f44c27cb1a17.gif)
 
@@ -29,35 +29,47 @@ Download from [Github Releases](https://github.com/sigoden/projclean/releases), 
 ## CLI
 
 ```
-SAGE:
-    projclean [OPTIONS] [--] [PATH]
+USAGE:
+    projclean [OPTIONS] [RULES]...
 
 ARGS:
-    <PATH>    Start searching from
+    <RULES>...    Search rules
 
 OPTIONS:
-    -h, --help              Print help information
-    -r, --rule <RULE>...    Add a search rule
-    -t, --targets           Print found target
-    -V, --version           Print version information
+    -C, --directory <DIR>    Start searching from DIR [default: .]
+    -h, --help               Print help information
+    -t, --targets            Print found targets, do not enter tui
+    -V, --version            Print version information
 ```
 
-Find node_modules folders.
+Find and clearn node_modules folders.
 
 ```
-projclean -r node_modules
+projclean node_modules
 ```
 
-Find node_modules folders starting from $HOME.
+Common search rules for common projects:
+
+| name    | command                                                  |
+| :------ | :------------------------------------------------------- |
+| js      | `projclean node_modules`                                 |
+| rs      | `projclean target@Cargo.toml`                            |
+| vs      | `projclean '^(Debug\|Release)$@\.sln$'`                  |
+| ios     | `projclean '^(build\|xcuserdata\|DerivedData)$@Podfile'` |
+| android | `projclean build@build.gradle`                           |
+| java    | `projclean target@pom.xml`                               |
+| php     | `projclean vendor@composer.json`                         |
+
+Find and clean dependencies & builds from kinds of projects.
 
 ```
-projclean $HOME -r node_modules
+projclean node_modules target@Cargo.toml target@pom.xml
 ```
 
-Find node_modules folders and rust target folders.
+Start searching from specific directory, other than currenct work directory.
 
 ```
-projclean -r node_modules -r target@Cargo.toml
+projclean -C $HOME node_modules target@pom.xml
 ```
 
 ## Rule
@@ -88,7 +100,7 @@ E.g. The directory has the following contents:
 Rule `target` found all `target` folders 
 
 ```
-$ projclean -t -r target
+$ projclean -t target
 /tmp/demo/rust-proj/target
 /tmp/demo/misc-proj/target
 ```
@@ -96,23 +108,9 @@ $ projclean -t -r target
 Rule `target@Cargo.toml` found `target` folders belongs the rust project.
 
 ```
-$ projclean -t -r target@Cargo.toml
+$ projclean -t target@Cargo.toml
 /tmp/demo/rust-proj/target
 ```
-
-## Projects
-
-Common search rules for common projects:
-
-| name    | command                                           |
-| :------ | :------------------------------------------------ |
-| js      | `-r node_modules`                                 |
-| rs      | `-r target@Cargo.toml`                            |
-| vs      | `-r '^(Debug\|Release)$@\.sln$'`                  |
-| ios     | `-r '^(build\|xcuserdata\|DerivedData)$@Podfile'` |
-| android | `-r build@build.gradle`                           |
-| java    | `-r target@pom.xml`                               |
-| php     | `-r vendor@composer.json`                         |
 
 ## License
 
