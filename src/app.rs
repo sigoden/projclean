@@ -33,7 +33,7 @@ const TICK_INTERVAL: u64 = 100;
 /// for separate path with kind text and size text
 const PATH_SEPARATE: &str = " - ";
 /// spinner dots
-const SPINNER_DOTS: [&str; 4] = ["◐", "◓", "◑", "◒"];
+const SPINNER_DOTS: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 /// title or hint
 const TITLE: &str = "Select with ↑CURSOR↓ and press SPACE key to delete.";
 
