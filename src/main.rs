@@ -72,30 +72,29 @@ fn command() -> Command<'static> {
             Arg::new("targets")
                 .short('t')
                 .long("targets")
-                .help("Print found target"),
+                .help("Print found targets, do not enter tui"),
         )
         .arg(
-            Arg::new("rule")
-                .short('r')
-                .long("rule")
-                .value_name("RULE")
-                .help("Add a search rule")
-                .takes_value(true)
-                .multiple_occurrences(true)
-                .multiple_values(true),
-        )
-        .arg(
-            Arg::new("entry")
+            Arg::new("directory")
+                .short('C')
+                .long("directory")
+                .value_name("DIR")
                 .allow_invalid_utf8(true)
-                .value_name("PATH")
-                .help("Start searching from"),
+                .default_value(".")
+                .help("Start searching from DIR"),
+        )
+        .arg(
+            Arg::new("rules")
+                .help("Search rules")
+                .value_name("RULES")
+                .multiple_values(true),
         )
 }
 
 fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
     let mut config = Config::default();
 
-    if let Some(values) = matches.values_of("rule") {
+    if let Some(values) = matches.values_of("rules") {
         for value in values {
             config.add_rule(value)?;
         }
@@ -109,7 +108,7 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
 }
 
 fn set_working_dir(matches: &clap::ArgMatches) -> Result<PathBuf> {
-    if let Some(base_directory) = matches.value_of_os("entry") {
+    if let Some(base_directory) = matches.value_of_os("directory") {
         let base_directory = Path::new(base_directory);
 
         if !is_existing_directory(base_directory) {
