@@ -101,7 +101,10 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
     }
 
     if config.rules.is_empty() {
-        bail!("No search rules");
+        bail!(
+            "No search rules, try `{} node_modules target@Cargo.toml`",
+            env!("CARGO_CRATE_NAME")
+        );
     }
 
     Ok(config)
