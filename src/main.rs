@@ -96,7 +96,7 @@ fn command() -> Command<'static> {
         )
         .arg(
             Arg::new("rules")
-                .help("Search rules")
+                .help("Search rules, like node_modules or target@Cargo.toml")
                 .value_name("RULES")
                 .required(true)
                 .multiple_values(true),

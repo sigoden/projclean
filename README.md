@@ -33,7 +33,7 @@ USAGE:
     projclean [OPTIONS] [RULES]...
 
 ARGS:
-    <RULES>...    Search rules
+    <RULES>...    Search rules, like node_modules or target@Cargo.toml
 
 OPTIONS:
     -C, --directory <DIR>    Start searching from DIR [default: .]
