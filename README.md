@@ -37,8 +37,9 @@ ARGS:
 
 OPTIONS:
     -C, --directory <DIR>    Start searching from DIR [default: .]
+    -t, --targets            Print found targets without entering tui
+    -f, --force              Delete found targets without entering tui
     -h, --help               Print help information
-    -t, --targets            Print found targets, do not enter tui
     -V, --version            Print version information
 ```
 
