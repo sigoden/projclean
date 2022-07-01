@@ -16,7 +16,7 @@ use std::{
     thread,
 };
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::{AppSettings, Arg, Command};
 use crossbeam_utils::sync::WaitGroup;
 
@@ -55,7 +55,7 @@ fn start(running: Arc<AtomicBool>) -> Result<()> {
         let wg = WaitGroup::new();
         delete_all(rx, wg.clone())?;
         wg.wait();
-    } else if matches.is_present("targets") {
+    } else if matches.is_present("print") {
         ls(rx)?;
     } else {
         run(rx, tx)?;
@@ -83,21 +83,22 @@ fn command() -> Command<'static> {
                 .help("Start searching from DIR"),
         )
         .arg(
-            Arg::new("targets")
-                .short('t')
-                .long("targets")
-                .help("Print found targets without entering tui"),
-        )
-        .arg(
             Arg::new("force")
                 .short('f')
                 .long("force")
                 .help("Delete found targets without entering tui"),
         )
         .arg(
+            Arg::new("print")
+                .short('p')
+                .long("print")
+                .help("Print found targets only"),
+        )
+        .arg(
             Arg::new("rules")
                 .help("Search rules")
                 .value_name("RULES")
+                .required(true)
                 .multiple_values(true),
         )
 }
@@ -109,10 +110,6 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
         for value in values {
             config.add_rule(value)?;
         }
-    }
-
-    if config.rules.is_empty() {
-        bail!("No search rules, see https://github.com/sigoden/projclean#search-rule");
     }
 
     Ok(config)

@@ -37,8 +37,8 @@ ARGS:
 
 OPTIONS:
     -C, --directory <DIR>    Start searching from DIR [default: .]
-    -t, --targets            Print found targets without entering tui
     -f, --force              Delete found targets without entering tui
+    -p, --print              Print found targets only
     -h, --help               Print help information
     -V, --version            Print version information
 ```
@@ -101,7 +101,7 @@ E.g. The directory has the following contents:
 Rule `target` found all `target` folders 
 
 ```
-$ projclean -t target
+$ projclean target -p
 /tmp/demo/rust-proj/target
 /tmp/demo/misc-proj/target
 ```
@@ -109,7 +109,7 @@ $ projclean -t target
 Rule `target@Cargo.toml` found `target` folders belongs the rust project.
 
 ```
-$ projclean -t target@Cargo.toml
+$ projclean target@Cargo.toml -p
 /tmp/demo/rust-proj/target
 ```
 
