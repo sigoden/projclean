@@ -5,7 +5,7 @@
 
 Find and clean dependencies & builds from software projects to saving space or making backup easier.
 
-![screenshot](https://user-images.githubusercontent.com/4012553/172361654-5fa36424-10da-4c52-b84a-f44c27cb1a17.gif)
+![screenshot](https://user-images.githubusercontent.com/4012553/176798015-89314719-5baa-4cce-b04a-52b0060a334e.gif)
 
 ## Why
 
@@ -50,15 +50,15 @@ projclean node_modules
 
 Common search rules for common projects:
 
-| name    | command                                                  |
-| :------ | :------------------------------------------------------- |
-| js      | `projclean node_modules`                                 |
-| rs      | `projclean target@Cargo.toml`                            |
-| vs      | `projclean '^(Debug\|Release)$@\.sln$'`                  |
-| ios     | `projclean '^(build\|xcuserdata\|DerivedData)$@Podfile'` |
-| android | `projclean build@build.gradle`                           |
-| java    | `projclean target@pom.xml`                               |
-| php     | `projclean vendor@composer.json`                         |
+| name    | search rule                                    |
+| :------ | :--------------------------------------------- |
+| js      | `node_modules`                                 |
+| rs      | `target@Cargo.toml`                            |
+| vs      | `'^(Debug\|Release)$@\.sln$'`                  |
+| ios     | `'^(build\|xcuserdata\|DerivedData)$@Podfile'` |
+| android | `build@build.gradle`                           |
+| java    | `target@pom.xml`                               |
+| php     | `vendor@composer.json`                         |
 
 Find and clean dependencies & builds from kinds of projects.
 
