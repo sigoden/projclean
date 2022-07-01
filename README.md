@@ -43,7 +43,7 @@ OPTIONS:
     -V, --version            Print version information
 ```
 
-Find and clearn node_modules folders.
+Find and clean node_modules folders.
 
 ```
 projclean node_modules
@@ -67,7 +67,7 @@ Find and clean dependencies & builds from kinds of projects.
 projclean node_modules target@Cargo.toml target@pom.xml
 ```
 
-Start searching from specific directory, other than currenct work directory.
+Start searching from specific directory, other than current work directory.
 
 ```
 projclean -C $HOME node_modules target@pom.xml
