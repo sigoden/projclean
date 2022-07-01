@@ -17,11 +17,12 @@ use std::{
 };
 
 use anyhow::{anyhow, bail, Context, Result};
-use clap::{Arg, Command};
+use clap::{AppSettings, Arg, Command};
+use crossbeam_utils::sync::WaitGroup;
 
 use app::run;
 use config::Config;
-use fs::{ls, search};
+use fs::{delete_all, ls, search};
 
 use common::{human_readable_folder_size, Message, PathItem, PathState};
 
@@ -50,8 +51,11 @@ fn start(running: Arc<AtomicBool>) -> Result<()> {
     let tx2 = tx.clone();
 
     thread::spawn(move || search(entry, config, tx2, running));
-
-    if matches.is_present("targets") {
+    if matches.is_present("force") {
+        let wg = WaitGroup::new();
+        delete_all(rx, wg.clone())?;
+        wg.wait();
+    } else if matches.is_present("targets") {
         ls(rx)?;
     } else {
         run(rx, tx)?;
@@ -63,17 +67,12 @@ fn command() -> Command<'static> {
     Command::new(env!("CARGO_CRATE_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
+        .global_setting(AppSettings::DeriveDisplayOrder)
         .about(concat!(
             env!("CARGO_PKG_DESCRIPTION"),
             " - ",
             env!("CARGO_PKG_REPOSITORY")
         ))
-        .arg(
-            Arg::new("targets")
-                .short('t')
-                .long("targets")
-                .help("Print found targets without entering tui"),
-        )
         .arg(
             Arg::new("directory")
                 .short('C')
@@ -82,6 +81,18 @@ fn command() -> Command<'static> {
                 .allow_invalid_utf8(true)
                 .default_value(".")
                 .help("Start searching from DIR"),
+        )
+        .arg(
+            Arg::new("targets")
+                .short('t')
+                .long("targets")
+                .help("Print found targets without entering tui"),
+        )
+        .arg(
+            Arg::new("force")
+                .short('f')
+                .long("force")
+                .help("Delete found targets without entering tui"),
         )
         .arg(
             Arg::new("rules")
@@ -101,8 +112,7 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
     }
 
     if config.rules.is_empty() {
-        bail!(
-            "No search rules, see https://github.com/sigoden/projclean#search-rule");
+        bail!("No search rules, see https://github.com/sigoden/projclean#search-rule");
     }
 
     Ok(config)

@@ -1,10 +1,13 @@
 use anyhow::Result;
+use crossbeam_utils::sync::WaitGroup;
 use jwalk::WalkDirGeneric;
 use std::collections::{HashMap, HashSet};
+use std::fs::remove_dir_all;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
+use std::thread;
 
 use crate::{Config, Message, PathItem};
 
@@ -67,6 +70,29 @@ pub fn ls(rx: Receiver<Message>) -> Result<()> {
         }
     }
     Ok(())
+}
+
+pub fn delete_all(rx: Receiver<Message>, wg: WaitGroup) -> Result<()> {
+    for message in rx {
+        match message {
+            Message::AddPath(path) => {
+                spawn_delete_path(path.path.clone(), wg.clone());
+            }
+            Message::DoneSearch => break,
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+fn spawn_delete_path(path: PathBuf, wg: WaitGroup) {
+    thread::spawn(move || {
+        match remove_dir_all(&path) {
+            Ok(_) => println!("Delete {}", path.display()),
+            Err(err) => eprintln!("Failed to delete {}, {}", path.display(), err),
+        }
+        drop(wg);
+    });
 }
 
 #[derive(Debug)]

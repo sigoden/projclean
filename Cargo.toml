@@ -16,6 +16,7 @@ anyhow = "1"
 jwalk = "0.6"
 tui = "0.18"
 crossterm = "0.23"
+crossbeam-utils = "0.8"
 clap = "3.2"
 regex = { version = "1.5", features = ["std"], default-features = false }
 ctrlc = "3.2"
