@@ -249,7 +249,7 @@ fn draw_status_bar<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
         .split(area);
 
     let indicator = if app.done_search {
-        "".to_string()
+        "✔️".to_string()
     } else {
         format!(" {} ", app.spinner())
     };

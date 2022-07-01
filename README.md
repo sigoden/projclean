@@ -1,11 +1,11 @@
-# ProjClean
+# Projclean
 
 [![CI](https://github.com/sigoden/projclean/actions/workflows/ci.yaml/badge.svg)](https://github.com/sigoden/projclean/actions/workflows/ci.yaml)
 [![Crates](https://img.shields.io/crates/v/projclean.svg)](https://crates.io/crates/projclean)
 
 Find and clean dependencies & builds from software projects to saving space or making backup easier.
 
-![screenshot](https://user-images.githubusercontent.com/4012553/176798015-89314719-5baa-4cce-b04a-52b0060a334e.gif)
+![screenshot](https://user-images.githubusercontent.com/4012553/176894927-1c3562b9-f8c3-4e85-9800-600abd746125.gif)
 
 ## Why
 
@@ -72,7 +72,7 @@ Start searching from specific directory, other than currenct work directory.
 projclean -C $HOME node_modules target@pom.xml
 ```
 
-## Rule
+## Search Rule
 
 Projclean find targets according search rule.
 

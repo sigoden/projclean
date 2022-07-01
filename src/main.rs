@@ -72,7 +72,7 @@ fn command() -> Command<'static> {
             Arg::new("targets")
                 .short('t')
                 .long("targets")
-                .help("Print found targets, do not enter tui"),
+                .help("Print found targets without entering tui"),
         )
         .arg(
             Arg::new("directory")
@@ -102,9 +102,7 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
 
     if config.rules.is_empty() {
         bail!(
-            "No search rules, try `{} node_modules target@Cargo.toml`",
-            env!("CARGO_CRATE_NAME")
-        );
+            "No search rules, see https://github.com/sigoden/projclean#search-rule");
     }
 
     Ok(config)
