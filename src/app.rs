@@ -26,7 +26,7 @@ use tui::{
     Frame, Terminal,
 };
 
-/// num of chars to preserve in path ellision
+/// num of chars to preserve in path ellison
 const PATH_PRESERVE_WIDTH: usize = 12;
 /// interval to refresh ui
 const TICK_INTERVAL: u64 = 100;
@@ -249,7 +249,7 @@ fn draw_status_bar<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
         .split(area);
 
     let indicator = if app.done_search {
-        "✔️".to_string()
+        " ✔ ".to_string()
     } else {
         format!(" {} ", app.spinner())
     };
