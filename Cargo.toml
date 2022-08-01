@@ -15,7 +15,7 @@ keywords = ["command-line", "clean", "tui"]
 anyhow = "1"
 jwalk = "0.6"
 tui = "0.18"
-crossterm = "0.23"
+crossterm = "0.24"
 crossbeam-utils = "0.8"
 clap = "3.2"
 regex = { version = "1.5", features = ["std"], default-features = false }
