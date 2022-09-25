@@ -20,7 +20,7 @@ pub struct PathItem {
     pub state: PathState,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum PathState {
     Normal,
     StartDeleting,
@@ -58,5 +58,5 @@ pub fn human_readable_folder_size(size: u64) -> String {
             }
         }
     }
-    return format!("{}B", size);
+    format!("{}B", size)
 }
