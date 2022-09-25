@@ -3,7 +3,7 @@
 [![CI](https://github.com/sigoden/projclean/actions/workflows/ci.yaml/badge.svg)](https://github.com/sigoden/projclean/actions/workflows/ci.yaml)
 [![Crates](https://img.shields.io/crates/v/projclean.svg)](https://crates.io/crates/projclean)
 
-Find and clean dependencies & builds from software projects to saving space or making backup easier.
+Clean cache dependencies and build output according to project.
 
 ![screenshot](https://user-images.githubusercontent.com/4012553/176894927-1c3562b9-f8c3-4e85-9800-600abd746125.gif)
 
@@ -43,34 +43,36 @@ OPTIONS:
     -V, --version      Print version information
 ```
 
-Find and clean node_modules folders.
+Clean up node_modules.
 
 ```
 projclean node_modules
 ```
 
-Common search rules for common projects:
-
-| name    | search rule                                    |
-| :------ | :--------------------------------------------- |
-| js      | `node_modules`                                 |
-| rs      | `target@Cargo.toml`                            |
-| vs      | `'^(Debug\|Release)$@\.sln$'`                  |
-| ios     | `'^(build\|xcuserdata\|DerivedData)$@Podfile'` |
-| android | `build@build.gradle`                           |
-| java    | `target@pom.xml`                               |
-| php     | `vendor@composer.json`                         |
-
-Find and clean dependencies & builds from kinds of projects.
+Clean up multiple kinds of projects.
 
 ```
-projclean node_modules target@Cargo.toml target@pom.xml
+projclean node_modules target@Cargo.toml
 ```
 
-Start searching from specific directory, other than current work directory.
+Start searching from a specific directory with `-C` or `--cwd`
 
 ```
-projclean -C $HOME node_modules target@pom.xml
+projclean -C $HOME node_modules
+```
+
+Enter interactive mode to select rules when invoking `projclean` without any rule.
+
+```
+projclean
+? Select search rules:  
+> [ ] js              node_modules
+  [ ] rust            target@Cargo.toml
+  [ ] vs              ^(Debug|Release)$@\.sln$
+  [ ] ios             ^(build|xcuserdata|DerivedData)$@Podfile
+  [ ] android         build@build.gradle
+  [ ] java            target@pom.xml
+  [ ] php             vendor@composer.json
 ```
 
 ## Search Rule

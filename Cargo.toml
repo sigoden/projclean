@@ -3,7 +3,7 @@ name = "projclean"
 version = "0.5.0"
 edition = "2021"
 authors = ["sigoden <sigoden@gmail.com>"]
-description = "Projects dependencies & builds cleaner"
+description = "Clean cache dependencies and build output according to project"
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/sigoden/projclean"
 repository = "https://github.com/sigoden/projclean"
@@ -20,6 +20,7 @@ crossbeam-utils = "0.8"
 clap = "3.2"
 regex = { version = "1.5", features = ["std"], default-features = false }
 ctrlc = "3.2"
+inquire = "0.3"
 
 [profile.release]
 lto = true

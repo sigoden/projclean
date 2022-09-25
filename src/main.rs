@@ -16,7 +16,7 @@ use std::{
     thread,
 };
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use clap::{AppSettings, Arg, Command};
 use crossbeam_utils::sync::WaitGroup;
 
@@ -25,6 +25,17 @@ use config::Config;
 use fs::{delete_all, ls, search};
 
 use common::{human_readable_folder_size, Message, PathItem, PathState};
+use inquire::{formatter::MultiOptionFormatter, MultiSelect};
+
+const RULES: [[&str; 2]; 7] = [
+    ["node_modules", "js"],
+    ["target@Cargo.toml", "rust"],
+    ["^(Debug|Release)$@\\.sln$", "vs"],
+    ["^(build|xcuserdata|DerivedData)$@Podfile", "ios"],
+    ["build@build.gradle", "android"],
+    ["target@pom.xml", "java"],
+    ["vendor@composer.json", "php"],
+];
 
 fn main() {
     let running = Arc::new(AtomicBool::new(true));
@@ -98,7 +109,6 @@ fn command() -> Command<'static> {
             Arg::new("rules")
                 .help("Search rules, like node_modules or target@Cargo.toml")
                 .value_name("RULES")
-                .required(true)
                 .multiple_values(true),
         )
 }
@@ -106,10 +116,13 @@ fn command() -> Command<'static> {
 fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
     let mut config = Config::default();
 
-    if let Some(values) = matches.values_of("rules") {
-        for value in values {
-            config.add_rule(value)?;
-        }
+    let rules = if let Some(values) = matches.values_of("rules") {
+        values.map(|v| v.to_string()).collect()
+    } else {
+        select_rules()?
+    };
+    for rule in rules {
+        config.add_rule(&rule)?;
     }
 
     Ok(config)
@@ -137,6 +150,45 @@ fn set_working_dir(matches: &clap::ArgMatches) -> Result<PathBuf> {
         let current_dir = env::current_dir()?;
         Ok(current_dir)
     }
+}
+
+fn select_rules() -> Result<Vec<String>> {
+    let options = RULES
+        .map(|[rule, name]| format!("{:<16}{}", name, rule))
+        .to_vec();
+
+    let to_rules = |selections: &[String]| {
+        selections
+            .iter()
+            .map(|sel| {
+                options
+                    .iter()
+                    .enumerate()
+                    .find(|(_, v)| sel == *v)
+                    .map(|(i, _)| RULES[i][0].to_string())
+                    .unwrap()
+            })
+            .collect::<Vec<String>>()
+    };
+
+    let formatter: MultiOptionFormatter<String> = &|a| {
+        to_rules(
+            &a.iter()
+                .map(|v| v.value.to_string())
+                .collect::<Vec<String>>(),
+        )
+        .join(" ")
+    };
+    let selections = MultiSelect::new("Select search rules:", options.clone())
+        .with_formatter(formatter)
+        .without_help_message()
+        .prompt()
+        .unwrap_or_default();
+
+    if selections.is_empty() {
+        bail!("You did not select any rule :(")
+    }
+    Ok(to_rules(&selections))
 }
 
 fn is_existing_directory(path: &Path) -> bool {
