@@ -74,9 +74,9 @@ fn command() -> Command<'static> {
             env!("CARGO_PKG_REPOSITORY")
         ))
         .arg(
-            Arg::new("directory")
+            Arg::new("cwd")
                 .short('C')
-                .long("directory")
+                .long("cwd")
                 .value_name("DIR")
                 .allow_invalid_utf8(true)
                 .default_value(".")
@@ -116,16 +116,16 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
 }
 
 fn set_working_dir(matches: &clap::ArgMatches) -> Result<PathBuf> {
-    if let Some(base_directory) = matches.value_of_os("directory") {
-        let base_directory = Path::new(base_directory);
+    if let Some(current_dir) = matches.value_of_os("cwd") {
+        let current_dir = Path::new(current_dir);
 
-        if !is_existing_directory(base_directory) {
+        if !is_existing_directory(current_dir) {
             return Err(anyhow!(
                 "The '--file' path '{}' is not a directory.",
-                base_directory.to_string_lossy()
+                current_dir.to_string_lossy()
             ));
         }
-        let base_directory = canonicalize(base_directory).unwrap();
+        let base_directory = canonicalize(current_dir).unwrap();
         env::set_current_dir(&base_directory).with_context(|| {
             format!(
                 "Cannot set '{}' as the current working directory",

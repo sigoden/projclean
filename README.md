@@ -36,11 +36,11 @@ ARGS:
     <RULES>...    Search rules, like node_modules or target@Cargo.toml
 
 OPTIONS:
-    -C, --directory <DIR>    Start searching from DIR [default: .]
-    -f, --force              Delete found targets without entering tui
-    -p, --print              Print found targets only
-    -h, --help               Print help information
-    -V, --version            Print version information
+    -C, --cwd <DIR>    Start searching from DIR [default: .]
+    -f, --force        Delete found targets without entering tui
+    -p, --print        Print found targets only
+    -h, --help         Print help information
+    -V, --version      Print version information
 ```
 
 Find and clean node_modules folders.
