@@ -3,9 +3,9 @@
 [![CI](https://github.com/sigoden/projclean/actions/workflows/ci.yaml/badge.svg)](https://github.com/sigoden/projclean/actions/workflows/ci.yaml)
 [![Crates](https://img.shields.io/crates/v/projclean.svg)](https://crates.io/crates/projclean)
 
-Clean cache dependencies and build output according to project.
+Clean cache dependencies and build output by project.
 
-![screenshot](https://user-images.githubusercontent.com/4012553/176894927-1c3562b9-f8c3-4e85-9800-600abd746125.gif)
+![screenshot](https://user-images.githubusercontent.com/4012553/192139216-6d76ea7b-6163-471a-b5bb-07ef465aa5b5.gif)
 
 ## Why
 
