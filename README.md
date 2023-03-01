@@ -117,7 +117,7 @@ $ projclean target@Cargo.toml -p
 
 ## License
 
-Copyright (c) 2022 projclean-developers.
+Copyright (c) 2022-2023 projclean-developers.
 
 argc is made available under the terms of either the MIT License or the Apache License 2.0, at your option.
 
