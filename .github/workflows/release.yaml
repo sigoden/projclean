@@ -8,6 +8,8 @@ on:
 jobs:
   release:
     name: Publish to Github Relases
+    permissions:
+      contents: write
     outputs:
       rc: ${{ steps.check-tag.outputs.rc }}
 
