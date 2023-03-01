@@ -58,5 +58,5 @@ pub fn human_readable_folder_size(size: u64) -> String {
             }
         }
     }
-    format!("{}B", size)
+    format!("{size}B")
 }

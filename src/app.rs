@@ -304,7 +304,7 @@ fn draw_help_view<B: Backend>(f: &mut Frame<B>, area: Rect) {
             let desc_style = Style::default();
             let keycode_style = Style::default();
             let content = vec![Spans::from(vec![
-                Span::styled(format!(" {:<30}", desc), desc_style),
+                Span::styled(format!(" {desc:<30}"), desc_style),
                 Span::styled(keycode.to_string(), keycode_style),
             ])];
             ListItem::new(content)

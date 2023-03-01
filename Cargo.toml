@@ -13,14 +13,14 @@ keywords = ["command-line", "clean", "tui"]
 
 [dependencies]
 anyhow = "1"
-jwalk = "0.6"
-tui = "0.18"
-crossterm = "0.24"
+jwalk = "0.8.1"
+tui = "0.19.0"
+crossterm = "0.26.1"
 crossbeam-utils = "0.8"
-clap = "3.2"
+clap = "4.1.8"
 regex = { version = "1.5", features = ["std"], default-features = false }
 ctrlc = "3.2"
-inquire = "0.3"
+inquire = "0.5.3"
 
 [profile.release]
 lto = true

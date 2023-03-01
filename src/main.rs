@@ -17,7 +17,7 @@ use std::{
 };
 
 use anyhow::{anyhow, bail, Context, Result};
-use clap::{AppSettings, Arg, Command};
+use clap::{Arg, ArgAction, Command};
 use crossbeam_utils::sync::WaitGroup;
 
 use app::run;
@@ -46,7 +46,7 @@ fn main() {
     .expect("Error setting Ctrl-C handler");
 
     if let Err(err) = start(running) {
-        eprintln!("{}", err);
+        eprintln!("{err}");
         process::exit(1);
     }
 }
@@ -62,11 +62,11 @@ fn start(running: Arc<AtomicBool>) -> Result<()> {
     let tx2 = tx.clone();
 
     thread::spawn(move || search(entry, config, tx2, running));
-    if matches.is_present("force") {
+    if matches.get_flag("force") {
         let wg = WaitGroup::new();
         delete_all(rx, wg.clone())?;
         wg.wait();
-    } else if matches.is_present("print") {
+    } else if matches.get_flag("print") {
         ls(rx)?;
     } else {
         run(rx, tx)?;
@@ -74,11 +74,10 @@ fn start(running: Arc<AtomicBool>) -> Result<()> {
     Ok(())
 }
 
-fn command() -> Command<'static> {
+fn command() -> Command {
     Command::new(env!("CARGO_CRATE_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
-        .global_setting(AppSettings::DeriveDisplayOrder)
         .about(concat!(
             env!("CARGO_PKG_DESCRIPTION"),
             " - ",
@@ -89,34 +88,36 @@ fn command() -> Command<'static> {
                 .short('C')
                 .long("cwd")
                 .value_name("DIR")
-                .allow_invalid_utf8(true)
                 .default_value(".")
+                .action(ArgAction::Set)
                 .help("Start searching from DIR"),
         )
         .arg(
             Arg::new("force")
                 .short('f')
                 .long("force")
+                .action(ArgAction::SetTrue)
                 .help("Delete found targets without entering tui"),
         )
         .arg(
             Arg::new("print")
                 .short('p')
                 .long("print")
+                .action(ArgAction::SetTrue)
                 .help("Print found targets only"),
         )
         .arg(
             Arg::new("rules")
                 .help("Search rules, like node_modules or target@Cargo.toml")
                 .value_name("RULES")
-                .multiple_values(true),
+                .action(ArgAction::Append),
         )
 }
 
 fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
     let mut config = Config::default();
 
-    let rules = if let Some(values) = matches.values_of("rules") {
+    let rules = if let Some(values) = matches.get_many::<String>("rules") {
         values.map(|v| v.to_string()).collect()
     } else {
         select_rules()?
@@ -129,7 +130,7 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
 }
 
 fn set_working_dir(matches: &clap::ArgMatches) -> Result<PathBuf> {
-    if let Some(current_dir) = matches.value_of_os("cwd") {
+    if let Some(current_dir) = matches.get_one::<String>("cwd") {
         let current_dir = Path::new(current_dir);
 
         if !is_existing_directory(current_dir) {
@@ -154,7 +155,7 @@ fn set_working_dir(matches: &clap::ArgMatches) -> Result<PathBuf> {
 
 fn select_rules() -> Result<Vec<String>> {
     let options = RULES
-        .map(|[rule, name]| format!("{:<16}{}", name, rule))
+        .map(|[rule, name]| format!("{name:<16}{rule}"))
         .to_vec();
 
     let to_rules = |selections: &[String]| {
