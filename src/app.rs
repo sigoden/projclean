@@ -6,6 +6,14 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use ratatui::{
+    backend::{Backend, CrosstermBackend},
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    Frame, Terminal,
+};
 use std::{
     fs::remove_dir_all,
     path::{Path, PathBuf},
@@ -16,14 +24,6 @@ use std::{
     io,
     sync::mpsc::Receiver,
     time::{Duration, Instant},
-};
-use tui::{
-    backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
-    text::{Span, Spans},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
-    Frame, Terminal,
 };
 
 /// num of chars to preserve in path ellison
@@ -160,7 +160,7 @@ fn run_ui<B: Backend>(
     }
 }
 
-fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
+fn draw(f: &mut Frame, app: &mut App) {
     if app.show_help {
         draw_help_view(f, f.size());
         return;
@@ -176,9 +176,7 @@ fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         vec![Constraint::Min(0), Constraint::Length(1)]
     };
 
-    let chunks = Layout::default()
-        .constraints(constraints.as_ref())
-        .split(f.size());
+    let chunks = Layout::default().constraints(constraints).split(f.size());
 
     draw_list_view(f, app, chunks[0]);
     draw_status_bar(f, app, chunks[1]);
@@ -187,7 +185,7 @@ fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     }
 }
 
-fn draw_list_view<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
+fn draw_list_view(f: &mut Frame, app: &mut App, area: Rect) {
     let width = area.width - 2;
     let items: Vec<ListItem> = app
         .items
@@ -230,19 +228,19 @@ fn draw_list_view<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
             let size_span = Span::styled(item.size_text.clone(), styles[1]);
             let mut spans = vec![path_span, separate_span, size_span];
             spans.push(indicator_span);
-            ListItem::new(Spans::from(spans))
+            ListItem::new(Line::from(spans))
         })
         .collect();
     let title = Span::styled(TITLE, Style::default().fg(Color::Yellow));
     let list = List::new(items).block(
         Block::default()
             .borders(Borders::ALL)
-            .title(Spans::from(vec![title])),
+            .title(Line::from(vec![title])),
     );
     f.render_stateful_widget(list, area, &mut app.state);
 }
 
-fn draw_status_bar<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
+fn draw_status_bar(f: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Min(0), Constraint::Length(16)].as_ref())
@@ -263,28 +261,28 @@ fn draw_status_bar<B: Backend>(f: &mut Frame<B>, app: &mut App, area: Rect) {
             human_readable_folder_size(app.total_saved_size)
         )),
     ];
-    let status_text = Paragraph::new(Spans::from(spans));
+    let status_text = Paragraph::new(Line::from(spans));
 
     let spans = vec![Span::styled(
         "Press ? for help".to_string(),
         Style::default().fg(Color::DarkGray),
     )];
 
-    let help_text = Paragraph::new(Spans::from(spans));
+    let help_text = Paragraph::new(Line::from(spans));
 
     f.render_widget(status_text, chunks[0]);
     f.render_widget(help_text, chunks[1]);
 }
 
-fn draw_error_line<B: Backend>(f: &mut Frame<B>, error: &str, area: Rect) {
-    let paragraph = Paragraph::new(Spans::from(vec![Span::styled(
+fn draw_error_line(f: &mut Frame, error: &str, area: Rect) {
+    let paragraph = Paragraph::new(Line::from(vec![Span::styled(
         error.to_string(),
         Style::default().fg(Color::Red),
     )]));
     f.render_widget(paragraph, area);
 }
 
-fn draw_help_view<B: Backend>(f: &mut Frame<B>, area: Rect) {
+fn draw_help_view(f: &mut Frame, area: Rect) {
     let help_docs = vec![
         ["Move selection up", "k  | <up> "],
         ["Move selection down", "j  | <down> "],
@@ -303,7 +301,7 @@ fn draw_help_view<B: Backend>(f: &mut Frame<B>, area: Rect) {
             let [desc, keycode] = row;
             let desc_style = Style::default();
             let keycode_style = Style::default();
-            let content = vec![Spans::from(vec![
+            let content = vec![Line::from(vec![
                 Span::styled(format!(" {desc:<30}"), desc_style),
                 Span::styled(keycode.to_string(), keycode_style),
             ])];
@@ -315,7 +313,7 @@ fn draw_help_view<B: Backend>(f: &mut Frame<B>, area: Rect) {
     let list = List::new(items).block(
         Block::default()
             .borders(Borders::ALL)
-            .title(Spans::from(vec![title])),
+            .title(Line::from(vec![title])),
     );
     f.render_widget(list, area);
 }
