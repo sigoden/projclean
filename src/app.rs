@@ -176,9 +176,7 @@ fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         vec![Constraint::Min(0), Constraint::Length(1)]
     };
 
-    let chunks = Layout::default()
-        .constraints(constraints.as_ref())
-        .split(f.size());
+    let chunks = Layout::default().constraints(constraints).split(f.size());
 
     draw_list_view(f, app, chunks[0]);
     draw_status_bar(f, app, chunks[1]);
