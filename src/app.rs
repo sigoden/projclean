@@ -106,8 +106,16 @@ fn run_ui<B: Backend>(
                 match key.code {
                     KeyCode::Char('q') => return Ok(()),
                     KeyCode::Char('c') if key.modifiers == KeyModifiers::CONTROL => return Ok(()),
-                    KeyCode::Char('j') | KeyCode::Down => app.next(),
-                    KeyCode::Char('k') | KeyCode::Up => app.previous(),
+                    KeyCode::Char('j') | KeyCode::Down => {
+                        if key.kind == event::KeyEventKind::Press {
+                            app.next()
+                        }
+                    }
+                    KeyCode::Char('k') | KeyCode::Up => {
+                        if key.kind == event::KeyEventKind::Press {
+                            app.previous()
+                        }
+                    }
                     KeyCode::Char('?') => app.show_help = true,
                     KeyCode::Home => app.begin(),
                     KeyCode::Char('G') | KeyCode::End => app.end(),
