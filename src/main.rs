@@ -18,7 +18,6 @@ use std::{
 
 use anyhow::{anyhow, bail, Context, Result};
 use clap::{Arg, ArgAction, Command};
-use crossbeam_utils::sync::WaitGroup;
 
 use app::run;
 use config::Config;
@@ -63,9 +62,7 @@ fn start(running: Arc<AtomicBool>) -> Result<()> {
 
     thread::spawn(move || search(entry, config, tx2, running));
     if matches.get_flag("force") {
-        let wg = WaitGroup::new();
-        delete_all(rx, wg.clone())?;
-        wg.wait();
+        delete_all(rx)?;
     } else if matches.get_flag("print") {
         ls(rx)?;
     } else {
