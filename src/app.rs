@@ -13,18 +13,14 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
     Frame, Terminal,
 };
+use remove_dir_all::remove_dir_all;
 use std::{
-    fs::remove_dir_all,
-    io::stdout,
+    io::{self, stdout},
     path::{Path, PathBuf},
-    sync::mpsc::Sender,
-    thread,
-};
-use std::{
-    io,
-    sync::mpsc::Receiver,
+    sync::mpsc::{Receiver, Sender},
     time::{Duration, Instant},
 };
+use threadpool::ThreadPool;
 
 /// num of chars to preserve in path ellison
 const PATH_PRESERVE_WIDTH: usize = 12;
@@ -48,6 +44,7 @@ struct App {
     error: Option<String>,
     last_keycode: Option<KeyCode>,
     app_state: AppState,
+    pool: ThreadPool,
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
@@ -389,7 +386,7 @@ impl App {
 
     fn delete_item(&mut self, sender: Sender<Message>) {
         if let Some(path) = self.start_deleting_item() {
-            spawn_delete_path(path, sender);
+            spawn_delete_path(self.pool.clone(), path, sender);
         }
     }
 
@@ -397,7 +394,7 @@ impl App {
         for item in self.items.iter_mut() {
             if item.state == PathState::Normal && item.size.is_some() {
                 item.state = PathState::StartDeleting;
-                spawn_delete_path(item.path.clone(), sender.clone());
+                spawn_delete_path(self.pool.clone(), item.path.clone(), sender.clone());
             }
         }
     }
@@ -456,15 +453,16 @@ fn truncate_path(path: &Path, width: u16) -> String {
     )
 }
 
-fn spawn_delete_path(path: PathBuf, sender: Sender<Message>) {
-    thread::spawn(move || match remove_dir_all(&path) {
+fn spawn_delete_path(pool: ThreadPool, path: PathBuf, sender: Sender<Message>) {
+    pool.execute(move || delete_path(path, sender));
+}
+
+fn delete_path(path: PathBuf, sender: Sender<Message>) {
+    match remove_dir_all(&path) {
         Ok(_) => sender.send(Message::SetPathDeleted(path)).unwrap(),
-        Err(err) => sender
-            .send(Message::PutError(format!(
-                "Cannot delete '{}', {}",
-                path.display(),
-                err
-            )))
-            .unwrap(),
-    });
+        Err(err) => {
+            let msg = Message::PutError(format!("Cannot delete '{}', {}", path.display(), err));
+            sender.send(msg).unwrap()
+        }
+    }
 }

@@ -1,13 +1,13 @@
 use anyhow::Result;
 use crossbeam_utils::sync::WaitGroup;
 use jwalk::WalkDirGeneric;
+use remove_dir_all::remove_dir_all;
 use std::collections::{HashMap, HashSet};
-use std::fs::remove_dir_all;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
-use std::thread;
+use threadpool::ThreadPool;
 
 use crate::{Config, Message, PathItem};
 
@@ -72,21 +72,24 @@ pub fn ls(rx: Receiver<Message>) -> Result<()> {
     Ok(())
 }
 
-pub fn delete_all(rx: Receiver<Message>, wg: WaitGroup) -> Result<()> {
+pub fn delete_all(rx: Receiver<Message>) -> Result<()> {
+    let wg = WaitGroup::new();
+    let pool = ThreadPool::default();
     for message in rx {
         match message {
             Message::AddPath(path) => {
-                spawn_delete_path(path.path.clone(), wg.clone());
+                spawn_delete_path(pool.clone(), path.path.clone(), wg.clone());
             }
             Message::DoneSearch => break,
             _ => {}
         }
     }
+    wg.wait();
     Ok(())
 }
 
-fn spawn_delete_path(path: PathBuf, wg: WaitGroup) {
-    thread::spawn(move || {
+fn spawn_delete_path(pool: ThreadPool, path: PathBuf, wg: WaitGroup) {
+    pool.execute(move || {
         match remove_dir_all(&path) {
             Ok(_) => println!("Delete {}", path.display()),
             Err(err) => eprintln!("Failed to delete {}, {}", path.display(), err),
