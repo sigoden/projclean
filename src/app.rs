@@ -151,8 +151,16 @@ impl App {
             KeyCode::Char('c') if key.modifiers == KeyModifiers::CONTROL => {
                 self.app_state = AppState::Exit;
             }
-            KeyCode::Char('j') | KeyCode::Down => self.next(),
-            KeyCode::Char('k') | KeyCode::Up => self.previous(),
+            KeyCode::Char('j') | KeyCode::Down => {
+                if key.kind == event::KeyEventKind::Press {
+                    self.next()
+                }
+            }
+            KeyCode::Char('k') | KeyCode::Up => {
+                if key.kind == event::KeyEventKind::Press {
+                    self.previous()
+                }
+            }
             KeyCode::Char('?') => self.show_help = true,
             KeyCode::Home => self.begin(),
             KeyCode::Char('G') | KeyCode::End => self.end(),
@@ -350,7 +358,7 @@ impl App {
 
     /// move selection to the top
     fn begin(&mut self) {
-        if self.items.len() == 0 {
+        if self.items.is_empty() {
             self.list_state.select(None);
         } else {
             self.list_state.select(Some(0));
@@ -358,7 +366,7 @@ impl App {
     }
 
     fn end(&mut self) {
-        if self.items.len() == 0 {
+        if self.items.is_empty() {
             self.list_state.select(None);
         } else {
             self.list_state.select(Some(self.items.len() - 1));
