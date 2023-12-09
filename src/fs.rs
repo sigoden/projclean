@@ -1,8 +1,8 @@
 use anyhow::Result;
 use crossbeam_utils::sync::WaitGroup;
 use jwalk::WalkDirGeneric;
+use remove_dir_all::remove_dir_all;
 use std::collections::{HashMap, HashSet};
-use std::fs::remove_dir_all;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};

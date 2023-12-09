@@ -13,17 +13,17 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
     Frame, Terminal,
 };
-use std::{
-    fs::remove_dir_all,
-    io::stdout,
-    path::{Path, PathBuf},
-    sync::mpsc::Sender,
-    thread,
-};
+use remove_dir_all::remove_dir_all;
 use std::{
     io,
     sync::mpsc::Receiver,
     time::{Duration, Instant},
+};
+use std::{
+    io::stdout,
+    path::{Path, PathBuf},
+    sync::mpsc::Sender,
+    thread,
 };
 
 /// num of chars to preserve in path ellison
