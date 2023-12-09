@@ -15,15 +15,11 @@ use ratatui::{
 };
 use remove_dir_all::remove_dir_all;
 use std::{
-    io,
-    sync::mpsc::Receiver,
-    time::{Duration, Instant},
-};
-use std::{
-    io::stdout,
+    io::{self, stdout},
     path::{Path, PathBuf},
-    sync::mpsc::Sender,
+    sync::mpsc::{Receiver, Sender},
     thread,
+    time::{Duration, Instant},
 };
 
 /// num of chars to preserve in path ellison
