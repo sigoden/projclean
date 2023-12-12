@@ -26,21 +26,44 @@ use fs::{delete_all, ls, search};
 use common::{human_readable_folder_size, Message, PathItem, PathState};
 use inquire::{formatter::MultiOptionFormatter, MultiSelect};
 
-const RULES: [[&str; 2]; 7] = [
-    ["node_modules", "js"],
-    ["target@Cargo.toml", "rust"],
-    ["^(Debug|Release)$@\\.sln$", "vs"],
-    ["^(build|xcuserdata|DerivedData)$@Podfile", "ios"],
-    ["build@build.gradle", "android"],
-    ["target@pom.xml", "java"],
-    ["vendor@composer.json", "php"],
+const RULES: [(&str, &str); 18] = [
+    ("node", "node_modules"),
+    ("cargo", "target@Cargo.toml"),
+    ("vs", "Debug,Release@*.sln"),
+    ("pod", "build,xcuserdata,DerivedData@Podfile"),
+    ("gradle", ".gradle,build@build.gradle"),
+    ("maven", "target@pom.xml"),
+    ("composer", "vendor@composer.json"),
+    ("swift", ".build,.swiftpm@Package.swift"),
+    (
+        "cmake",
+        "build,cmake-build-debug,cmake-build-release@CMakeLists.txt",
+    ),
+    ("zig", "zig-cache@build.zig"),
+    ("stack", ".stack-work@stack.yaml"),
+    ("sbt", "target,project/target@build.sbt"),
+    (
+        "dart",
+        ".dart_tool,build,linux/flutter/ephemeral,windows/flutter/ephemeral@pubspec.yaml",
+    ),
+    ("elixir", "_build@mix.exs"),
+    ("c#", "bin,obj@*.csproj"),
+    ("f#", "bin,obj@*.fsproj"),
+    (
+        "unity",
+        "Library,Temp,Obj,Logs,MemoryCaptures,Build,Builds@Assembly-CSharp.csproj",
+    ),
+    (
+        "unreal",
+        "Binaries,Build,Saved,DerivedDataCache,Intermediate@*.uproject",
+    ),
 ];
 
 fn main() {
     let running = Arc::new(AtomicBool::new(true));
-    let running2 = running.clone();
+    let running_cloned = running.clone();
     ctrlc::set_handler(move || {
-        running2.store(false, Ordering::SeqCst);
+        running_cloned.store(false, Ordering::SeqCst);
     })
     .expect("Error setting Ctrl-C handler");
 
@@ -152,7 +175,7 @@ fn set_working_dir(matches: &clap::ArgMatches) -> Result<PathBuf> {
 
 fn select_rules() -> Result<Vec<String>> {
     let options = RULES
-        .map(|[rule, name]| format!("{name:<16}{rule}"))
+        .map(|(name, rule)| format!("{name:<16}{rule}"))
         .to_vec();
 
     let to_rules = |selections: &[String]| {
@@ -163,7 +186,7 @@ fn select_rules() -> Result<Vec<String>> {
                     .iter()
                     .enumerate()
                     .find(|(_, v)| sel == *v)
-                    .map(|(i, _)| RULES[i][0].to_string())
+                    .map(|(i, _)| RULES[i].1.to_string())
                     .unwrap()
             })
             .collect::<Vec<String>>()
@@ -179,7 +202,6 @@ fn select_rules() -> Result<Vec<String>> {
     };
     let selections = MultiSelect::new("Select search rules:", options.clone())
         .with_formatter(formatter)
-        .without_help_message()
         .prompt()
         .unwrap_or_default();
 

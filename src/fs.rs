@@ -17,7 +17,7 @@ pub fn search(
     tx: Sender<Message>,
     running: Arc<AtomicBool>,
 ) -> Result<()> {
-    let walk_dir = WalkDirGeneric::<((), Option<()>)>::new(entry.clone())
+    let walk_dir = WalkDirGeneric::<((), Option<(String, Vec<String>)>)>::new(entry.clone())
         .skip_hidden(false)
         .process_read_dir(move |_depth, _path, _state, children| {
             let mut checker = Checker::new(&config);
@@ -30,9 +30,9 @@ pub fn search(
             children.iter_mut().for_each(|dir_entry_result| {
                 if let Ok(dir_entry) = dir_entry_result {
                     if let Some(name) = dir_entry.file_name.to_str() {
-                        if matches.get(name).is_some() {
+                        if let Some((rule_id, purges)) = matches.get(name) {
                             dir_entry.read_children_path = None;
-                            dir_entry.client_state = Some(());
+                            dir_entry.client_state = Some((rule_id.to_string(), purges.to_vec()));
                         }
                     }
                 }
@@ -45,11 +45,20 @@ pub fn search(
             return Ok(());
         }
         if let Ok(dir_entry) = &dir_entry_result {
-            if let Some(()) = dir_entry.client_state.as_ref() {
-                let path = dir_entry.path();
-                let size = du(&path).ok();
-                let relative_path = path.strip_prefix(&entry)?.to_path_buf();
-                let _ = tx.send(Message::AddPath(PathItem::new(path, relative_path, size)));
+            if let Some((_, purges)) = dir_entry.client_state.as_ref() {
+                let entry_path = dir_entry.path();
+                for purge in purges {
+                    let mut path = entry_path.clone();
+                    for part in purge.split('/').skip(1) {
+                        path.push(part)
+                    }
+                    if !path.exists() {
+                        continue;
+                    }
+                    let size = du(&path).ok();
+                    let relative_path = path.strip_prefix(&entry)?.to_path_buf();
+                    let _ = tx.send(Message::AddPath(PathItem::new(path, relative_path, size)));
+                }
             }
         }
     }
@@ -100,8 +109,14 @@ fn spawn_delete_path(pool: ThreadPool, path: PathBuf, wg: WaitGroup) {
 
 #[derive(Debug)]
 struct Checker<'a, 'b> {
-    matches: HashMap<&'a str, (HashSet<&'b str>, HashSet<&'b str>)>,
+    matches: HashMap<&'a str, CheckMatches<'a, 'b>>,
     config: &'a Config,
+}
+
+#[derive(Debug, Default)]
+struct CheckMatches<'a, 'b> {
+    purge: HashMap<&'b str, &'a Vec<String>>,
+    check: HashSet<&'b str>,
 }
 
 impl<'a, 'b> Checker<'a, 'b> {
@@ -114,30 +129,30 @@ impl<'a, 'b> Checker<'a, 'b> {
 
     fn check(&mut self, name: &'b str) {
         for rule in &self.config.rules {
-            let (purge_matches, check_matches) = self.matches.entry(rule.get_id()).or_default();
-            if rule.test_purge(name) {
-                purge_matches.insert(name);
+            let matches = self.matches.entry(rule.get_id()).or_default();
+            if let Some(purges) = rule.test_purge(name) {
+                matches.purge.insert(name, purges.as_ref());
             }
             if rule.test_check(name) {
-                check_matches.insert(name);
+                matches.check.insert(name);
             }
         }
     }
 
-    fn to_matches(&self) -> HashMap<String, &'a str> {
-        let mut matches: HashMap<String, &'a str> = HashMap::new();
-        for (rule_id, (purge_matches, check_matches)) in &self.matches {
-            if !purge_matches.is_empty()
-                && (!check_matches.is_empty() || self.config.is_rule_no_check(rule_id))
+    fn to_matches(&self) -> HashMap<String, (&'a str, &'a Vec<String>)> {
+        let mut output = HashMap::new();
+        for (rule_id, matches) in &self.matches {
+            if !matches.purge.is_empty()
+                && (!matches.check.is_empty() || self.config.is_no_check_rule(rule_id))
             {
-                for name in purge_matches {
-                    if !matches.contains_key(*name) {
-                        matches.insert(name.to_string(), rule_id);
+                for (name, purges) in &matches.purge {
+                    if !output.contains_key(*name) {
+                        output.insert(name.to_string(), (*rule_id, *purges));
                     }
                 }
             }
         }
-        matches
+        output
     }
 }
 
@@ -189,16 +204,8 @@ mod tests {
 
     #[test]
     fn test_match_paths() {
-        assert_match_paths!(
-            "^target$@Cargo.toml",
-            &["target", "Cargo.toml"],
-            &["target"]
-        );
+        assert_match_paths!("target@Cargo.toml", &["target", "Cargo.toml"], &["target"]);
         assert_match_paths!("target@Cargo.toml", &["target.rs", "Cargo.toml"]);
-        assert_match_paths!(
-            "^(Debug|Release)$@.*\\.sln",
-            &["Debug", "Demo.sln"],
-            &["Debug"]
-        );
+        assert_match_paths!("Debug,Release@*.sln", &["Debug", "Demo.sln"], &["Debug"]);
     }
 }

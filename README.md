@@ -66,13 +66,13 @@ Enter interactive mode to select rules when invoking `projclean` without any rul
 ```
 projclean
 ? Select search rules:  
-> [ ] js              node_modules
-  [ ] rust            target@Cargo.toml
-  [ ] vs              ^(Debug|Release)$@\.sln$
-  [ ] ios             ^(build|xcuserdata|DerivedData)$@Podfile
-  [ ] android         build@build.gradle
-  [ ] java            target@pom.xml
-  [ ] php             vendor@composer.json
+> [ ] node            node_modules
+  [ ] cargo           target@Cargo.toml
+  [ ] vs              Debug,Release@*.sln
+  [ ] pod             build,xcuserdata,DerivedData@Podfile
+  [ ] gradle          .gradle,build@build.gradle
+  [ ] maven           target@pom.xml
+  [ ] composer        vendor@composer.json
 ```
 
 ## Search Rule
@@ -82,7 +82,7 @@ Projclean find targets according search rule.
 Rule consist of two parts:
 
 ```
-<target-folder>[@flag-file]
+<target[,target...]>[@flag-file]
 ```
 
 > Both target folder and flag file can be plain text or regex.
