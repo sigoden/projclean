@@ -7,7 +7,7 @@ use crossterm::{
 };
 use ratatui::{
     backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
@@ -30,8 +30,6 @@ const TICK_INTERVAL: u64 = 100;
 const PATH_SEPARATE: &str = " - ";
 /// spinner dots
 const SPINNER_DOTS: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-/// title or hint
-const TITLE: &str = "Select with ↑CURSOR↓ and press SPACE key to delete.";
 
 #[derive(Debug, Default)]
 struct App {
@@ -40,9 +38,7 @@ struct App {
     spinner_index: usize,
     total_size: u64,
     total_saved_size: u64,
-    show_help: bool,
     error: Option<String>,
-    last_keycode: Option<KeyCode>,
     app_state: AppState,
     pool: ThreadPool,
 }
@@ -139,76 +135,38 @@ impl App {
         if key.kind != event::KeyEventKind::Press {
             return Ok(());
         }
-        let mut set_last_code = true;
         self.clear_tmp_state();
         match key.code {
-            KeyCode::Char('q') | KeyCode::Esc => {
+            KeyCode::Down => {
+                if key.kind == event::KeyEventKind::Press {
+                    self.next()
+                }
+            }
+            KeyCode::Up => {
+                if key.kind == event::KeyEventKind::Press {
+                    self.previous()
+                }
+            }
+            KeyCode::Char(' ') => {
+                self.delete_item(tx.clone());
+            }
+            KeyCode::Home => self.begin(),
+            KeyCode::End => self.end(),
+            KeyCode::F(4) => self.delete_all_items(tx.clone()),
+            KeyCode::F(7) => self.order_by_path(),
+            KeyCode::F(8) => self.order_by_size(),
+            KeyCode::Esc => {
                 self.app_state = AppState::Exit;
             }
             KeyCode::Char('c') if key.modifiers == KeyModifiers::CONTROL => {
                 self.app_state = AppState::Exit;
             }
-            KeyCode::Char('j') | KeyCode::Down => {
-                if key.kind == event::KeyEventKind::Press {
-                    self.next()
-                }
-            }
-            KeyCode::Char('k') | KeyCode::Up => {
-                if key.kind == event::KeyEventKind::Press {
-                    self.previous()
-                }
-            }
-            KeyCode::Char('?') => self.show_help = true,
-            KeyCode::Home => self.begin(),
-            KeyCode::Char('G') | KeyCode::End => self.end(),
-            KeyCode::Char('g') => {
-                if let Some(KeyCode::Char('g')) = self.last_keycode {
-                    self.begin();
-                    set_last_code = false;
-                }
-            }
-            KeyCode::Char('p') => {
-                if let Some(KeyCode::Char('o')) = self.last_keycode {
-                    self.order_by_path();
-                    set_last_code = false;
-                }
-            }
-            KeyCode::Char('s') => {
-                if let Some(KeyCode::Char('o')) = self.last_keycode {
-                    self.order_by_size();
-                    set_last_code = false;
-                }
-            }
-            KeyCode::Char('d') => {
-                if let Some(KeyCode::Char('d')) = self.last_keycode {
-                    self.delete_item(tx.clone());
-                    set_last_code = false;
-                }
-            }
-            KeyCode::Char('a') => {
-                if let Some(KeyCode::Char('d')) = self.last_keycode {
-                    self.delete_all_items(tx.clone());
-                    set_last_code = false;
-                }
-            }
-            KeyCode::Char(' ') => {
-                self.delete_item(tx.clone());
-                self.last_keycode = None;
-            }
             _ => {}
-        }
-        if set_last_code {
-            self.last_keycode = Some(key.code);
         }
         Ok(())
     }
 
     fn draw(&mut self, frame: &mut Frame) {
-        if self.show_help {
-            Self::draw_help_view(frame, frame.size());
-            return;
-        }
-
         let mut constraints = vec![Constraint::Min(0), Constraint::Length(1)];
         if self.error.is_some() {
             constraints.push(Constraint::Length(1));
@@ -261,11 +219,10 @@ impl App {
                 ListItem::new(Line::from(spans))
             })
             .collect();
-        let title = Span::styled(TITLE, Style::default().fg(Color::Yellow));
         let list = List::new(items).block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(Line::from(vec![title])),
+                .title(Self::title_line()),
         );
         frame.render_stateful_widget(list, area, &mut self.list_state);
     }
@@ -286,18 +243,7 @@ impl App {
             " ".into(),
         ]);
 
-        let help_line = Line::from(vec![Span::styled(
-            "Press ? for help".to_string(),
-            Style::default().fg(Color::DarkGray),
-        )]);
-
-        let areas = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Min(0), Constraint::Length(16)])
-            .split(area);
-
-        frame.render_widget(Paragraph::new(status_line), areas[0]);
-        frame.render_widget(Paragraph::new(help_line), areas[1]);
+        frame.render_widget(Paragraph::new(status_line), area);
     }
 
     fn draw_error_line(frame: &mut Frame, error: &str, area: Rect) {
@@ -305,30 +251,30 @@ impl App {
         frame.render_widget(Paragraph::new(error_line), area);
     }
 
-    fn draw_help_view(frame: &mut Frame, area: Rect) {
-        let help_docs = vec![
-            ("Move selection up", "k  | <up> "),
-            ("Move selection down", "j  | <down> "),
-            ("Move to the top", "gg | <home> "),
-            ("Move to the bottom", "G  | <end> "),
-            ("Delete current folder", "dd | <space> "),
-            ("Delete all folders", "da"),
-            ("Sort by path", "op"),
-            ("Sort by size", "os"),
-            ("Exit", "q  | <ctrl+c>"),
+    fn title_line() -> Line<'static> {
+        let hotkeys = vec![
+            ("↑↓", "Move"),
+            ("SPACE", "Delete"),
+            ("F4", "Delete All"),
+            ("F7/F8", "Sort by Path/Size"),
+            ("ESC", "Exit"),
         ];
-        let items: Vec<ListItem> = help_docs
+        let colors = [
+            Style::default().fg(Color::Yellow),
+            Style::default().fg(Color::DarkGray),
+            Style::default(),
+        ];
+        let spans: Vec<Span<'static>> = hotkeys
             .into_iter()
-            .map(|(desc, keycode)| {
-                ListItem::new(Line::from(vec![
-                    format!(" {desc:<30}").into(),
-                    keycode.into(),
-                ]))
+            .map(|(k, v)| {
+                vec![
+                    Span::styled(format!(" {k} "), colors[0]),
+                    Span::styled(format!("{v} "), colors[1]),
+                ]
             })
-            .collect();
-        let title = " Help ".yellow();
-        let list = List::new(items).block(Block::default().borders(Borders::ALL).title(title));
-        frame.render_widget(list, area);
+            .collect::<Vec<Vec<_>>>()
+            .join(&Span::styled("|", colors[2]));
+        Line::from(spans)
     }
 }
 
@@ -430,7 +376,6 @@ impl App {
         if self.error.is_some() {
             self.error = None;
         }
-        self.show_help = false;
     }
 
     fn on_tick(&mut self) {
