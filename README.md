@@ -11,7 +11,7 @@ Project dependecies & build artifacts cleaner.
 
 - **Save space**: Cleans unnecessary directories and files.
 - **Very fast**: Written in rust, optimized for concurrency.
-- **Easy to use**: A tui listing all found targets and pressing `<space>` to get rid of them.
+- **Easy to use**: A tui listing all found targets and pressing `SPACE` to get rid of them.
 - **Minified**: single executable file, no dependencies, no installation.
 
 ## Install
@@ -64,15 +64,19 @@ projclean -C $HOME node_modules
 Enter interactive mode to select rules when invoking `projclean` without any rule.
 
 ```
-projclean
+$ projclean
 ? Select search rules:  
 > [ ] node            node_modules
   [ ] cargo           target@Cargo.toml
-  [ ] vs              Debug,Release@*.sln
-  [ ] pod             build,xcuserdata,DerivedData@Podfile
-  [ ] gradle          .gradle,build@build.gradle
   [ ] maven           target@pom.xml
+  [ ] gradle          .gradle,build@build.gradle
+  [ ] python          __pycache__,.mypy_cache,.pytest_cache,.ruff_cache,.tox@*.py
   [ ] composer        vendor@composer.json
+  [ ] swift           .build,.swiftpm@Package.swift
+  [ ] dart            .dart_tool,build,linux/flutter/ephemeral,windows/flutter/ephemeral@pubspec.yaml
+  [ ] sbt             target,project/target@build.sbt
+v [ ] zig             zig-cache,zig-out@build.zig
+[↑↓ to move, space to select one, → to all, ← to none, type to filter]
 ```
 
 ## Search Rule

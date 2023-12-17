@@ -26,27 +26,29 @@ use fs::{delete_all, ls, search};
 use common::{human_readable_folder_size, Message, PathItem, PathState};
 use inquire::{formatter::MultiOptionFormatter, MultiSelect};
 
-const RULES: [(&str, &str); 18] = [
+const RULES: [(&str, &str); 21] = [
     ("node", "node_modules"),
     ("cargo", "target@Cargo.toml"),
-    ("vs", "Debug,Release@*.sln"),
-    ("pod", "build,xcuserdata,DerivedData@Podfile"),
-    ("gradle", ".gradle,build@build.gradle"),
     ("maven", "target@pom.xml"),
+    ("gradle", ".gradle,build@build.gradle"),
+    (
+        "python",
+        "__pycache__,.mypy_cache,.pytest_cache,.ruff_cache,.tox@*.py",
+    ),
     ("composer", "vendor@composer.json"),
     ("swift", ".build,.swiftpm@Package.swift"),
-    (
-        "cmake",
-        "build,cmake-build-debug,cmake-build-release@CMakeLists.txt",
-    ),
-    ("zig", "zig-cache@build.zig"),
-    ("stack", ".stack-work@stack.yaml"),
-    ("sbt", "target,project/target@build.sbt"),
     (
         "dart",
         ".dart_tool,build,linux/flutter/ephemeral,windows/flutter/ephemeral@pubspec.yaml",
     ),
+    ("sbt", "target,project/target@build.sbt"),
+    ("zig", "zig-cache,zig-out@build.zig"),
+    ("stack", ".stack-work@stack.yaml"),
+    ("jupyter", ".ipynb_checkpoints@*.ipynb"),
+    ("ocaml", "_build@dune-project"),
     ("elixir", "_build@mix.exs"),
+    ("erlang", "_build@rebar.config"),
+    ("vc", "Debug,Release@*.vcxproj"),
     ("c#", "bin,obj@*.csproj"),
     ("f#", "bin,obj@*.fsproj"),
     (
@@ -57,6 +59,7 @@ const RULES: [(&str, &str); 18] = [
         "unreal",
         "Binaries,Build,Saved,DerivedDataCache,Intermediate@*.uproject",
     ),
+    ("godot", ".godot@project.godot"),
 ];
 
 fn main() {
@@ -202,6 +205,7 @@ fn select_rules() -> Result<Vec<String>> {
     };
     let selections = MultiSelect::new("Select search rules:", options.clone())
         .with_formatter(formatter)
+        .with_page_size(10)
         .prompt()
         .unwrap_or_default();
 
