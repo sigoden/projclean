@@ -108,14 +108,16 @@ fn command() -> Command {
                 .value_name("DIR")
                 .default_value(".")
                 .action(ArgAction::Set)
-                .help("Start searching from DIR"),
+                .help("Start searching from <DIR>"),
         )
         .arg(
-            Arg::new("force")
-                .short('f')
-                .long("force")
-                .action(ArgAction::SetTrue)
-                .help("Forcefully delete the found targets, do not enter TUI"),
+            Arg::new("exclude")
+                .short('e')
+                .long("exclude")
+                .value_name("DIR")
+                .value_delimiter(',')
+                .action(ArgAction::Append)
+                .help("Exclude directories from search. e.g. ignore1,ignore2"),
         )
         .arg(
             Arg::new("print")
@@ -123,6 +125,13 @@ fn command() -> Command {
                 .long("print")
                 .action(ArgAction::SetTrue)
                 .help("Print the found targets, do not enter TUI"),
+        )
+        .arg(
+            Arg::new("force")
+                .short('f')
+                .long("force")
+                .action(ArgAction::SetTrue)
+                .help("Forcefully delete the found targets, do not enter TUI"),
         )
         .arg(
             Arg::new("rules")
@@ -136,10 +145,16 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
     let mut config = Config::default();
 
     let rules = if let Some(values) = matches.get_many::<String>("rules") {
-        values.map(|v| v.to_string()).collect()
+        values.cloned().collect()
     } else {
         select_rules()?
     };
+
+    config.excludes = matches
+        .get_many::<String>("exclude")
+        .map(|v| v.cloned().collect())
+        .unwrap_or_default();
+
     for rule in rules {
         config.add_rule(&rule)?;
     }

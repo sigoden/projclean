@@ -35,11 +35,12 @@ Arguments:
   [RULES]...  Search rules, e.g. node_modules target@Cargo.toml
 
 Options:
-  -C, --cwd <DIR>  Start searching from DIR [default: .]
-  -f, --force      Forcefully delete the found targets, do not enter TUI
-  -p, --print      Print the found targets, do not enter TUI
-  -h, --help       Print help
-  -V, --version    Print version
+  -C, --cwd <DIR>      Start searching from <DIR> [default: .]
+  -e, --exclude <DIR>  Exclude directories from search. e.g. ignore1,ignore2
+  -p, --print          Print the found targets, do not enter TUI
+  -f, --force          Forcefully delete the found targets, do not enter TUI
+  -h, --help           Print help
+  -V, --version        Print version
 ```
 
 Clean up node_modules.
