@@ -2,12 +2,13 @@ use anyhow::Result;
 use crossbeam_utils::sync::WaitGroup;
 use jwalk::WalkDirGeneric;
 use remove_dir_all::remove_dir_all;
+use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{self, AtomicBool};
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 use threadpool::ThreadPool;
 
 use crate::{Config, Message, PathItem};
@@ -18,12 +19,16 @@ pub fn search(
     tx: Sender<Message>,
     running: Arc<AtomicBool>,
 ) -> Result<()> {
+    let config_clone = config.clone();
     let walk_dir = WalkDirGeneric::<((), Option<(String, Vec<String>)>)>::new(entry.clone())
         .skip_hidden(false)
         .process_read_dir(move |_depth, _path, _state, children| {
-            let mut checker = Checker::new(&config);
+            let mut checker = Checker::new(&config_clone);
             for dir_entry in children.iter().flatten() {
                 if let Some(name) = dir_entry.file_name.to_str() {
+                    if config_clone.exclude.contains(&name.to_string()) {
+                        continue;
+                    }
                     checker.check(name);
                 }
             }
@@ -31,7 +36,9 @@ pub fn search(
             children.iter_mut().for_each(|dir_entry_result| {
                 if let Ok(dir_entry) = dir_entry_result {
                     if let Some(name) = dir_entry.file_name.to_str() {
-                        if let Some((rule_id, purges)) = matches.get(name) {
+                        if config_clone.exclude.contains(&name.to_string()) {
+                            dir_entry.read_children_path = None;
+                        } else if let Some((rule_id, purges)) = matches.get(name) {
                             dir_entry.read_children_path = None;
                             dir_entry.client_state = Some((rule_id.to_string(), purges.to_vec()));
                         }
@@ -41,7 +48,7 @@ pub fn search(
         });
 
     for dir_entry_result in walk_dir {
-        if !running.load(Ordering::SeqCst) {
+        if !running.load(atomic::Ordering::SeqCst) {
             let _ = tx.send(Message::DoneSearch);
             return Ok(());
         }
@@ -56,10 +63,21 @@ pub fn search(
                     if !path.exists() {
                         continue;
                     }
+                    let time = last_modified(&path).ok();
+                    if let (Some((expect, order)), Some(time)) = (config.time, time) {
+                        if !compare(order, expect, (time.as_secs_f64() / 86400.0).ceil() as _) {
+                            continue;
+                        }
+                    }
+
                     let size = du(&path).ok();
+                    if let (Some((expect, order)), Some(size)) = (config.size, size) {
+                        if !compare(order, expect, size) {
+                            continue;
+                        }
+                    }
                     let relative_path = path.strip_prefix(&entry)?.to_path_buf();
-                    let days = days(&path).ok();
-                    let path_item = PathItem::new(path, relative_path, rule_id, days, size);
+                    let path_item = PathItem::new(path, relative_path, rule_id, time, size);
                     let _ = tx.send(Message::AddPath(path_item));
                 }
             }
@@ -110,6 +128,14 @@ fn spawn_delete_path(pool: ThreadPool, path: PathBuf, wg: WaitGroup) {
     });
 }
 
+fn compare<T: PartialOrd>(order: Ordering, expect: T, target: T) -> bool {
+    match order {
+        Ordering::Less => target < expect,
+        Ordering::Equal => target == expect,
+        Ordering::Greater => target > expect,
+    }
+}
+
 #[derive(Debug)]
 struct Checker<'a, 'b> {
     matches: HashMap<&'a str, CheckMatches<'a, 'b>>,
@@ -131,9 +157,6 @@ impl<'a, 'b> Checker<'a, 'b> {
     }
 
     fn check(&mut self, name: &'b str) {
-        if self.config.excludes.contains(&name.to_string()) {
-            return;
-        }
         for rule in &self.config.rules {
             let matches = self.matches.entry(rule.get_id()).or_default();
             if let Some(purges) = rule.test_purge(name) {
@@ -186,13 +209,12 @@ fn du(path: &Path) -> Result<u64> {
     Ok(total)
 }
 
-fn days(path: &Path) -> Result<usize> {
+fn last_modified(path: &Path) -> Result<Duration> {
     let metdata = std::fs::metadata(path)?;
     let modified = metdata.modified()?;
     let now = SystemTime::now();
-    let secs = now.duration_since(modified)?.as_secs_f64();
-    let days = (secs / 86400_f64).ceil() as usize;
-    Ok(days)
+    let output = now.duration_since(modified)?;
+    Ok(output)
 }
 
 #[cfg(test)]

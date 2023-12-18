@@ -118,6 +118,24 @@ fn command() -> Command {
                 .help("Exclude directories from search, e.g. ignore1,ignore2"),
         )
         .arg(
+            Arg::new("time")
+                .short('t')
+                .long("time")
+                .value_name("[+|-]DAY")
+                .allow_hyphen_values(true)
+                .action(ArgAction::Set)
+                .help("Path was last modified less than, more than or exactly <DAY> days"),
+        )
+        .arg(
+            Arg::new("size")
+                .short('s')
+                .long("size")
+                .value_name("[+|-]SIZE")
+                .allow_hyphen_values(true)
+                .action(ArgAction::Set)
+                .help("Path uses less than, more than or exactly <SIZE> units (K|M|G|T) of space"),
+        )
+        .arg(
             Arg::new("delete-all")
                 .short('D')
                 .long("delete-all")
@@ -148,10 +166,18 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
         select_rules()?
     };
 
-    config.excludes = matches
+    config.exclude = matches
         .get_many::<String>("exclude")
         .map(|v| v.cloned().collect())
         .unwrap_or_default();
+
+    if let Some(time) = matches.get_one::<String>("time") {
+        config.set_time(time)?;
+    }
+
+    if let Some(size) = matches.get_one::<String>("size") {
+        config.set_size(size)?;
+    }
 
     for rule in rules {
         config.add_rule(&rule)?;
@@ -211,9 +237,15 @@ fn select_rules() -> Result<Vec<String>> {
         )
         .join(" ")
     };
+
+    let min_height = 3;
+    let height = crossterm::terminal::size()
+        .map(|(_, height)| height as usize)
+        .unwrap_or(min_height + 1);
+
     let selections = MultiSelect::new("Select search rules:", options.clone())
         .with_formatter(formatter)
-        .with_page_size(10)
+        .with_page_size(height - min_height)
         .prompt()
         .unwrap_or_default();
 
