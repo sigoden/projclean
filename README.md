@@ -35,23 +35,25 @@ Arguments:
   [RULES]...  Search rules, e.g. node_modules target@Cargo.toml
 
 Options:
-  -C, --cwd <DIR>      Start searching from <DIR> [default: .]
-  -x, --exclude <DIR>  Exclude directories from search, e.g. ignore1,ignore2
-  -D, --delete-all     Automatically delete all found targets
-  -P, --print          Print the found targets
-  -h, --help           Print help
-  -V, --version        Print version
+  -C, --cwd <DIR>         Start searching from <DIR> [default: .]
+  -x, --exclude <DIR>     Exclude directories from search, e.g. ignore1,ignore2
+  -t, --time <[+|-]DAY>   Path was last modified less than, more than or exactly <DAY> days
+  -s, --size <[+|-]SIZE>  Path uses less than, more than or exactly <SIZE> units (K|M|G|T) of space
+  -D, --delete-all        Automatically delete all found targets
+  -P, --print             Print the found targets
+  -h, --help              Print help
+  -V, --version           Print version
 ```
 
 Clean up node_modules.
 
-```
+```sh
 projclean node_modules
 ```
 
 Clean up various types of projects.
 
-```
+```sh
 projclean node_modules target@Cargo.toml
 ```
 
@@ -59,6 +61,11 @@ Start searching from a specific directory with `-C` or `--cwd`
 
 ```sh
 projclean -C $HOME node_modules # equal to `cd $HOME && projclean node_modules`
+```
+
+Find node_modules with the latest updates over 30 days and occupy more than 1G disk space.
+```sh
+projclean node_modules --time +30 --size +1G
 ```
 
 ## Search Rule

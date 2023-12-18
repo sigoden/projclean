@@ -1,14 +1,18 @@
-use anyhow::{bail, Context, Error, Result};
+use anyhow::{anyhow, bail, Context, Error, Result};
+use std::cmp::Ordering;
 use std::path::PathBuf;
+use std::time::Duration;
 use std::{collections::HashMap, str::FromStr};
 
 /// storage space unit
 static UNITS: [char; 4] = ['T', 'G', 'M', 'K'];
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Config {
     pub rules: Vec<Rule>,
-    pub excludes: Vec<String>,
+    pub exclude: Vec<String>,
+    pub time: Option<(usize, Ordering)>,
+    pub size: Option<(u64, Ordering)>,
 }
 
 impl Config {
@@ -25,9 +29,46 @@ impl Config {
         self.rules.push(rule);
         Ok(())
     }
+
+    pub fn set_time(&mut self, time: &str) -> Result<()> {
+        let (order, time) = extract_order(time);
+        let time: usize = time.parse().map_err(|_| anyhow!("Invalid time value"))?;
+        self.time = Some((time, order));
+        Ok(())
+    }
+
+    pub fn set_size(&mut self, size: &str) -> Result<()> {
+        let (order, size) = extract_order(size);
+        let size: u64 = parse_size(size).ok_or_else(|| anyhow!("Invalid size value"))?;
+        self.size = Some((size, order));
+        Ok(())
+    }
 }
 
-#[derive(Debug)]
+fn extract_order(value: &str) -> (Ordering, &str) {
+    if let Some(value) = value.strip_prefix('+') {
+        (Ordering::Greater, value)
+    } else if let Some(value) = value.strip_prefix('-') {
+        (Ordering::Less, value)
+    } else {
+        (Ordering::Equal, value)
+    }
+}
+
+fn parse_size(value: &str) -> Option<u64> {
+    for (i, ch) in UNITS.into_iter().rev().enumerate() {
+        if let Some(value) = value.strip_suffix(ch) {
+            let unit = 1024_u64.pow((i + 1) as _);
+            let value: f64 = value.parse().ok()?;
+            let value = value * (unit as f64);
+            return Some(value as u64);
+        }
+    }
+    let value: f64 = value.parse().ok()?;
+    Some(value as u64)
+}
+
+#[derive(Debug, Clone)]
 pub struct Rule {
     id: String,
     purge: HashMap<String, Vec<String>>,
@@ -106,7 +147,8 @@ pub struct PathItem {
     pub path: PathBuf,
     pub relative_path: PathBuf,
     pub rule_id: String,
-    pub days: Option<usize>,
+    pub time: Option<Duration>,
+    pub time_text: String,
     pub size: Option<u64>,
     pub size_text: String,
     pub state: PathState,
@@ -124,18 +166,23 @@ impl PathItem {
         path: PathBuf,
         relative_path: PathBuf,
         rule_id: &str,
-        days: Option<usize>,
+        time: Option<Duration>,
         size: Option<u64>,
     ) -> Self {
-        let size_text = match size {
-            Some(size) => human_readable_folder_size(size),
-            None => String::new(),
-        };
+        let size_text = size.map(human_readable_folder_size).unwrap_or_default();
+        let time_text = time
+            .map(|v| {
+                let v = v.as_secs_f64() / 86400.0;
+                let v = v.ceil() as u64;
+                format!("{v}d")
+            })
+            .unwrap_or_default();
         PathItem {
             path,
             relative_path,
             rule_id: rule_id.to_string(),
-            days,
+            time,
+            time_text,
             size,
             size_text,
             state: PathState::Normal,
@@ -158,7 +205,7 @@ pub fn human_readable_folder_size(size: u64) -> String {
             }
         }
     }
-    format!("{size}B")
+    format!("{size}")
 }
 
 #[cfg(test)]
@@ -178,5 +225,21 @@ mod tests {
         assert_eq!(rule.test_purge("Debug-"), None);
         assert_eq!(rule.test_purge("-Debug"), None);
         assert!(rule.test_check("App.sln"));
+    }
+
+    #[test]
+    fn test_extract_order() {
+        assert_eq!(extract_order("+10"), (Ordering::Greater, "10"));
+        assert_eq!(extract_order("10"), (Ordering::Equal, "10"));
+        assert_eq!(extract_order("-10"), (Ordering::Less, "10"));
+    }
+
+    #[test]
+    fn test_parse_size() {
+        assert_eq!(parse_size("1K"), Some(1024));
+        assert_eq!(parse_size("1M"), Some(1024 * 1024));
+        assert_eq!(parse_size("1G"), Some(1024 * 1024 * 1024));
+        assert_eq!(parse_size("1T"), Some(1024 * 1024 * 1024 * 1024));
+        assert_eq!(parse_size("1.2M"), Some(1258291));
     }
 }

@@ -210,12 +210,7 @@ impl App {
                     truncate_path(&item.relative_path, path_width),
                     Alignment::Left,
                 ),
-                (
-                    item.days
-                        .map(|v| format!("{v}d"))
-                        .unwrap_or_else(|| "-".to_string()),
-                    Alignment::Right,
-                ),
+                (item.time_text.clone(), Alignment::Right),
                 (item.size_text.clone(), Alignment::Right),
             ]
             .into_iter()
@@ -327,7 +322,7 @@ impl App {
     }
 
     fn order_by_lastmod(&mut self) {
-        self.items.sort_by(|b, a| a.days.cmp(&b.days));
+        self.items.sort_by(|b, a| a.time.cmp(&b.time));
     }
 
     fn order_by_size(&mut self) {
