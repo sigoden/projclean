@@ -7,10 +7,10 @@ use crossterm::{
 };
 use ratatui::{
     backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Layout, Rect},
-    style::{Color, Modifier, Style, Stylize},
+    layout::{Alignment, Constraint, Layout, Rect},
+    style::{Color, Modifier, Style, Styled, Stylize},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    widgets::{Block, Borders, Padding, Paragraph, Row, Table, TableState},
     Frame, Terminal,
 };
 use remove_dir_all::remove_dir_all;
@@ -26,14 +26,12 @@ use threadpool::ThreadPool;
 const PATH_PRESERVE_WIDTH: usize = 12;
 /// interval to refresh ui
 const TICK_INTERVAL: u64 = 100;
-/// for separate path with kind text and size text
-const PATH_SEPARATE: &str = " - ";
 /// spinner dots
 const SPINNER_DOTS: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 #[derive(Debug, Default)]
 struct App {
-    list_state: ListState,
+    table_state: TableState,
     items: Vec<PathItem>,
     spinner_index: usize,
     total_size: u64,
@@ -154,7 +152,8 @@ impl App {
             KeyCode::End => self.end(),
             KeyCode::F(4) => self.delete_all_items(tx.clone()),
             KeyCode::F(7) => self.order_by_path(),
-            KeyCode::F(8) => self.order_by_size(),
+            KeyCode::F(8) => self.order_by_lastmod(),
+            KeyCode::F(9) => self.order_by_size(),
             KeyCode::Esc => {
                 self.app_state = AppState::Exit;
             }
@@ -176,55 +175,61 @@ impl App {
             .constraints(constraints)
             .split(frame.size());
 
-        self.draw_list_view(frame, areas[0]);
+        self.draw_table_view(frame, areas[0]);
         self.draw_status_bar(frame, areas[1]);
         if let Some(error) = self.error.as_ref() {
             Self::draw_error_line(frame, error, areas[2])
         }
     }
 
-    fn draw_list_view(&mut self, frame: &mut Frame, area: Rect) {
-        let items: Vec<ListItem> = self
-            .items
-            .iter()
-            .enumerate()
-            .map(|(index, item)| {
-                let is_selected = self.list_state.selected() == Some(index);
-                let mut width = area.width - 2;
-                width -= (item.size_text.len() + PATH_SEPARATE.len()) as u16;
-                let mut styles = vec![Style::default(), Style::default()];
-                if is_selected {
-                    styles = styles.into_iter().map(|v| v.fg(Color::Cyan)).collect();
+    fn draw_table_view(&mut self, frame: &mut Frame, area: Rect) {
+        let path_width = area.width - 17; // 2(border) + 1(padding) + 3(gap) + 1(indicator) + 5(day) + 5(size)
+        let widths = [
+            Constraint::Length(1),
+            Constraint::Length(path_width),
+            Constraint::Length(5),
+            Constraint::Length(5),
+        ];
+        let rows = self.items.iter().enumerate().map(|(index, item)| {
+            let is_selected = self.table_state.selected() == Some(index);
+            let mut style = Style::default();
+            if is_selected {
+                style = style.fg(Color::Cyan);
+            }
+            let indicator = match item.state {
+                PathState::Deleted => {
+                    style = style.add_modifier(Modifier::DIM);
+                    "✘".to_string()
                 }
-                let indicator_span = match item.state {
-                    PathState::Deleted => {
-                        styles = styles
-                            .into_iter()
-                            .map(|v| v.add_modifier(Modifier::DIM))
-                            .collect();
-                        width -= 3;
-                        Span::styled(" ✘ ", styles[0])
-                    }
-                    PathState::StartDeleting => {
-                        width -= 3;
-                        Span::styled(format!(" {} ", self.spinner()), styles[0])
-                    }
-                    _ => Span::styled("", styles[0]),
-                };
-                let path_span = Span::styled(truncate_path(&item.relative_path, width), styles[0]);
-                let separate_span = Span::styled(PATH_SEPARATE, styles[0]);
-                let size_span = Span::styled(item.size_text.clone(), styles[1]);
-                let mut spans = vec![path_span, separate_span, size_span];
-                spans.push(indicator_span);
-                ListItem::new(Line::from(spans))
-            })
-            .collect();
-        let list = List::new(items).block(
+                PathState::StartDeleting => self.spinner().to_string(),
+                _ => String::new(),
+            };
+            let row_cells = [
+                (indicator, Alignment::Left),
+                (
+                    truncate_path(&item.relative_path, path_width),
+                    Alignment::Left,
+                ),
+                (
+                    item.days
+                        .map(|v| format!("{v}d"))
+                        .unwrap_or_else(|| "-".to_string()),
+                    Alignment::Right,
+                ),
+                (item.size_text.clone(), Alignment::Right),
+            ]
+            .into_iter()
+            .map(|(t, a)| Line::from(vec![t.set_style(style)]).alignment(a));
+            Row::new(row_cells)
+        });
+        let table = Table::new(rows).widths(&widths).column_spacing(1).block(
             Block::default()
                 .borders(Borders::ALL)
+                .padding(Padding::new(0, 1, 0, 0))
                 .title(Self::title_line()),
         );
-        frame.render_stateful_widget(list, area, &mut self.list_state);
+
+        frame.render_stateful_widget(table, area, &mut self.table_state);
     }
 
     fn draw_status_bar(&mut self, frame: &mut Frame, area: Rect) {
@@ -256,7 +261,7 @@ impl App {
             ("↑↓", "Move"),
             ("SPACE", "Delete"),
             ("F4", "Delete All"),
-            ("F7/F8", "Sort by Path/Size"),
+            ("F7/F8/F9", "Sort by Path/LastMod/Size"),
             ("ESC", "Exit"),
         ];
         let colors = [
@@ -282,43 +287,47 @@ impl App {
     /// move selection to next item (with wrap around to the top)
     fn next(&mut self) {
         let next = self
-            .list_state
+            .table_state
             .selected()
             .map(|i| (i + 1) % self.items.len())
             .or(Some(0));
-        self.list_state.select(next);
+        self.table_state.select(next);
     }
 
     /// select the previous item (with wrap around to the bottom)
     fn previous(&mut self) {
         let next = self
-            .list_state
+            .table_state
             .selected()
             .map(|i| (i + self.items.len().saturating_sub(1)) % self.items.len())
             .or(Some(0));
-        self.list_state.select(next);
+        self.table_state.select(next);
     }
 
     /// move selection to the top
     fn begin(&mut self) {
         if self.items.is_empty() {
-            self.list_state.select(None);
+            self.table_state.select(None);
         } else {
-            self.list_state.select(Some(0));
+            self.table_state.select(Some(0));
         }
     }
 
     fn end(&mut self) {
         if self.items.is_empty() {
-            self.list_state.select(None);
+            self.table_state.select(None);
         } else {
-            self.list_state.select(Some(self.items.len() - 1));
+            self.table_state.select(Some(self.items.len() - 1));
         }
     }
 
     fn order_by_path(&mut self) {
         self.items
             .sort_by(|a, b| a.relative_path.cmp(&b.relative_path));
+    }
+
+    fn order_by_lastmod(&mut self) {
+        self.items.sort_by(|b, a| a.days.cmp(&b.days));
     }
 
     fn order_by_size(&mut self) {
@@ -346,7 +355,7 @@ impl App {
     }
 
     fn start_deleting_item(&mut self) -> Option<PathBuf> {
-        if let Some(index) = self.list_state.selected() {
+        if let Some(index) = self.table_state.selected() {
             let item = &mut self.items[index];
             if item.state != PathState::Normal || item.size.is_none() {
                 None

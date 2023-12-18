@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
+use std::time::SystemTime;
 use threadpool::ThreadPool;
 
 use crate::{Config, Message, PathItem};
@@ -45,7 +46,7 @@ pub fn search(
             return Ok(());
         }
         if let Ok(dir_entry) = &dir_entry_result {
-            if let Some((_, purges)) = dir_entry.client_state.as_ref() {
+            if let Some((rule_id, purges)) = dir_entry.client_state.as_ref() {
                 let entry_path = dir_entry.path();
                 for purge in purges {
                     let mut path = entry_path.clone();
@@ -57,7 +58,9 @@ pub fn search(
                     }
                     let size = du(&path).ok();
                     let relative_path = path.strip_prefix(&entry)?.to_path_buf();
-                    let _ = tx.send(Message::AddPath(PathItem::new(path, relative_path, size)));
+                    let days = days(&path).ok();
+                    let path_item = PathItem::new(path, relative_path, rule_id, days, size);
+                    let _ = tx.send(Message::AddPath(path_item));
                 }
             }
         }
@@ -181,6 +184,15 @@ fn du(path: &Path) -> Result<u64> {
         }
     }
     Ok(total)
+}
+
+fn days(path: &Path) -> Result<usize> {
+    let metdata = std::fs::metadata(path)?;
+    let modified = metdata.modified()?;
+    let now = SystemTime::now();
+    let secs = now.duration_since(modified)?.as_secs_f64();
+    let days = (secs / 86400_f64).ceil() as usize;
+    Ok(days)
 }
 
 #[cfg(test)]

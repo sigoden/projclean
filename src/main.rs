@@ -1,6 +1,5 @@
 mod app;
 mod common;
-mod config;
 mod fs;
 
 use std::{
@@ -20,10 +19,9 @@ use anyhow::{anyhow, bail, Context, Result};
 use clap::{Arg, ArgAction, Command};
 
 use app::run;
-use config::Config;
 use fs::{delete_all, ls, search};
 
-use common::{human_readable_folder_size, Message, PathItem, PathState};
+use common::{human_readable_folder_size, Config, Message, PathItem, PathState};
 use inquire::{formatter::MultiOptionFormatter, MultiSelect};
 
 const RULES: [(&str, &str); 21] = [
