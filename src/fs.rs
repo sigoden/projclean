@@ -128,6 +128,9 @@ impl<'a, 'b> Checker<'a, 'b> {
     }
 
     fn check(&mut self, name: &'b str) {
+        if self.config.excludes.contains(&name.to_string()) {
+            return;
+        }
         for rule in &self.config.rules {
             let matches = self.matches.entry(rule.get_id()).or_default();
             if let Some(purges) = rule.test_purge(name) {

@@ -4,6 +4,7 @@ use std::{collections::HashMap, str::FromStr};
 #[derive(Debug, Default)]
 pub struct Config {
     pub rules: Vec<Rule>,
+    pub excludes: Vec<String>,
 }
 
 impl Config {
