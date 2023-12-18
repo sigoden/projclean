@@ -29,18 +29,17 @@ Download from [Github Releases](https://github.com/sigoden/projclean/releases), 
 ## CLI
 
 ```
-USAGE:
-    projclean [OPTIONS] [RULES]...
+Usage: projclean [OPTIONS] [RULES]...
 
-ARGS:
-    <RULES>...    Search rules, like node_modules or target@Cargo.toml
+Arguments:
+  [RULES]...  Search rules, e.g. node_modules target@Cargo.toml
 
-OPTIONS:
-    -C, --cwd <DIR>    Start searching from DIR [default: .]
-    -f, --force        Delete found targets without entering tui
-    -p, --print        Print found targets only
-    -h, --help         Print help information
-    -V, --version      Print version information
+Options:
+  -C, --cwd <DIR>  Start searching from DIR [default: .]
+  -f, --force      Forcefully delete the found targets, do not enter TUI
+  -p, --print      Print the found targets, do not enter TUI
+  -h, --help       Print help
+  -V, --version    Print version
 ```
 
 Clean up node_modules.
@@ -57,26 +56,8 @@ projclean node_modules target@Cargo.toml
 
 Start searching from a specific directory with `-C` or `--cwd`
 
-```
-projclean -C $HOME node_modules
-```
-
-Enter interactive mode to select rules when invoking `projclean` without any rule.
-
-```
-$ projclean
-? Select search rules:  
-> [ ] node            node_modules
-  [ ] cargo           target@Cargo.toml
-  [ ] maven           target@pom.xml
-  [ ] gradle          .gradle,build@build.gradle
-  [ ] python          __pycache__,.mypy_cache,.pytest_cache,.ruff_cache,.tox@*.py
-  [ ] composer        vendor@composer.json
-  [ ] swift           .build,.swiftpm@Package.swift
-  [ ] dart            .dart_tool,build,linux/flutter/ephemeral,windows/flutter/ephemeral@pubspec.yaml
-  [ ] sbt             target,project/target@build.sbt
-v [ ] zig             zig-cache,zig-out@build.zig
-[↑↓ to move, space to select one, → to all, ← to none, type to filter]
+```sh
+projclean -C $HOME node_modules # equal to `cd $HOME && projclean node_modules`
 ```
 
 ## Search Rule
@@ -86,38 +67,32 @@ Projclean find targets according search rule.
 Rule consist of two parts:
 
 ```
-<target[,target...]>[@flag-file]
+<target[,target...]>[@flag]
 ```
 
-> Both target folder and flag file can be plain text or regex.
-
-Flag file is used to filter out folders that match only names but not projects.
- 
-E.g. The directory has the following contents:
-
-```
-.
-├── misc-proj
-│   └── target
-└── rust-proj
-    ├── Cargo.toml
-    └── target
-```
-
-Rule `target` found all `target` folders 
-
-```
-$ projclean target -p
-/tmp/demo/rust-proj/target
-/tmp/demo/misc-proj/target
-```
-
-Rule `target@Cargo.toml` found `target` folders belongs the rust project.
-
-```
-$ projclean target@Cargo.toml -p
-/tmp/demo/rust-proj/target
-```
+| project  | rule                                                                              |
+| -------- | --------------------------------------------------------------------------------- |
+| node     | `node_modules`                                                                    |
+| cargo    | `target@Cargo.toml`                                                               |
+| maven    | `target@pom.xml`                                                                  |
+| gradle   | `.gradle,build@build.gradle`                                                      |
+| python   | `__pycache__,.mypy_cache,.pytest_cache,.ruff_cache,.tox@*.py`                     |
+| composer | `vendor@composer.json`                                                            |
+| swift    | `.build,.swiftpm@Package.swift`                                                   |
+| dart     | `.dart_tool,build,linux/flutter/ephemeral,windows/flutter/ephemeral@pubspec.yaml` |
+| sbt      | `target,project/target@build.sbt`                                                 |
+| zig      | `zig-cache,zig-out@build.zig`                                                     |
+| stack    | `.stack-work@stack.yaml`                                                          |
+| jupyter  | `.ipynb_checkpoints@*.ipynb`                                                      |
+| ocaml    | `_build@dune-project`                                                             |
+| elixir   | `_build@mix.exs`                                                                  |
+| erlang   | `_build@rebar.config`                                                             |
+| vc       | `Debug,Release@*.vcxproj`                                                         |
+| c#       | `bin,obj@*.csproj`                                                                |
+| f#       | `bin,obj@*.fsproj`                                                                |
+| unity    | `Library,Temp,Obj,Logs,MemoryCaptures,Build,Builds@Assembly-CSharp.csproj`        |
+| unreal   | `Binaries,Build,Saved,DerivedDataCache,Intermediate@*.uproject`                   |
+| godot    | `.godot@project.godot`                                                            |
 
 ## License
 

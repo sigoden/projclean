@@ -101,11 +101,6 @@ fn command() -> Command {
     Command::new(env!("CARGO_CRATE_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
-        .about(concat!(
-            env!("CARGO_PKG_DESCRIPTION"),
-            " - ",
-            env!("CARGO_PKG_REPOSITORY")
-        ))
         .arg(
             Arg::new("cwd")
                 .short('C')
@@ -120,18 +115,18 @@ fn command() -> Command {
                 .short('f')
                 .long("force")
                 .action(ArgAction::SetTrue)
-                .help("Delete found targets without entering tui"),
+                .help("Forcefully delete the found targets, do not enter TUI"),
         )
         .arg(
             Arg::new("print")
                 .short('p')
                 .long("print")
                 .action(ArgAction::SetTrue)
-                .help("Print found targets only"),
+                .help("Print the found targets, do not enter TUI"),
         )
         .arg(
             Arg::new("rules")
-                .help("Search rules, like node_modules or target@Cargo.toml")
+                .help("Search rules, e.g. node_modules target@Cargo.toml")
                 .value_name("RULES")
                 .action(ArgAction::Append),
         )
