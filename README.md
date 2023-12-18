@@ -36,9 +36,9 @@ Arguments:
 
 Options:
   -C, --cwd <DIR>      Start searching from <DIR> [default: .]
-  -e, --exclude <DIR>  Exclude directories from search. e.g. ignore1,ignore2
-  -p, --print          Print the found targets, do not enter TUI
-  -f, --force          Forcefully delete the found targets, do not enter TUI
+  -x, --exclude <DIR>  Exclude directories from search, e.g. ignore1,ignore2
+  -D, --delete-all     Automatically delete all found targets
+  -P, --print          Print the found targets
   -h, --help           Print help
   -V, --version        Print version
 ```
@@ -49,7 +49,7 @@ Clean up node_modules.
 projclean node_modules
 ```
 
-Clean up multiple kinds of projects.
+Clean up various types of projects.
 
 ```
 projclean node_modules target@Cargo.toml
@@ -72,7 +72,7 @@ Rule consist of two parts:
 ```
 
 | project  | rule                                                                              |
-| -------- | --------------------------------------------------------------------------------- |
+| :------- | :-------------------------------------------------------------------------------- |
 | node     | `node_modules`                                                                    |
 | cargo    | `target@Cargo.toml`                                                               |
 | maven    | `target@pom.xml`                                                                  |

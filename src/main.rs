@@ -87,7 +87,7 @@ fn start(running: Arc<AtomicBool>) -> Result<()> {
     let tx2 = tx.clone();
 
     thread::spawn(move || search(entry, config, tx2, running));
-    if matches.get_flag("force") {
+    if matches.get_flag("delete-all") {
         delete_all(rx)?;
     } else if matches.get_flag("print") {
         ls(rx)?;
@@ -112,26 +112,26 @@ fn command() -> Command {
         )
         .arg(
             Arg::new("exclude")
-                .short('e')
+                .short('x')
                 .long("exclude")
                 .value_name("DIR")
                 .value_delimiter(',')
                 .action(ArgAction::Append)
-                .help("Exclude directories from search. e.g. ignore1,ignore2"),
+                .help("Exclude directories from search, e.g. ignore1,ignore2"),
+        )
+        .arg(
+            Arg::new("delete-all")
+                .short('D')
+                .long("delete-all")
+                .action(ArgAction::SetTrue)
+                .help("Automatically delete all found targets"),
         )
         .arg(
             Arg::new("print")
-                .short('p')
+                .short('P')
                 .long("print")
                 .action(ArgAction::SetTrue)
-                .help("Print the found targets, do not enter TUI"),
-        )
-        .arg(
-            Arg::new("force")
-                .short('f')
-                .long("force")
-                .action(ArgAction::SetTrue)
-                .help("Forcefully delete the found targets, do not enter TUI"),
+                .help("Print the found targets"),
         )
         .arg(
             Arg::new("rules")
