@@ -5,7 +5,7 @@
 
 Project dependecies & build artifacts cleaner.
 
-![screenshot](https://user-images.githubusercontent.com/4012553/192139216-6d76ea7b-6163-471a-b5bb-07ef465aa5b5.gif)
+![screenshot](https://github.com/sigoden/projclean/assets/4012553/a875c5f2-e87e-4b74-a48e-3636024d31eb)
 
 ## Why
 
