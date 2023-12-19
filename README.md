@@ -78,29 +78,31 @@ Rule consist of two parts:
 <target[,target...]>[@flag]
 ```
 
-| project  | rule                                                                              |
-| :------- | :-------------------------------------------------------------------------------- |
-| node     | `node_modules`                                                                    |
-| cargo    | `target@Cargo.toml`                                                               |
-| maven    | `target@pom.xml`                                                                  |
-| gradle   | `.gradle,build@build.gradle`                                                      |
-| python   | `__pycache__,.mypy_cache,.pytest_cache,.ruff_cache,.tox@*.py`                     |
-| composer | `vendor@composer.json`                                                            |
-| swift    | `.build,.swiftpm@Package.swift`                                                   |
-| dart     | `.dart_tool,build,linux/flutter/ephemeral,windows/flutter/ephemeral@pubspec.yaml` |
-| sbt      | `target,project/target@build.sbt`                                                 |
-| zig      | `zig-cache,zig-out@build.zig`                                                     |
-| stack    | `.stack-work@stack.yaml`                                                          |
-| jupyter  | `.ipynb_checkpoints@*.ipynb`                                                      |
-| ocaml    | `_build@dune-project`                                                             |
-| elixir   | `_build@mix.exs`                                                                  |
-| erlang   | `_build@rebar.config`                                                             |
-| vc       | `Debug,Release@*.vcxproj`                                                         |
-| c#       | `bin,obj@*.csproj`                                                                |
-| f#       | `bin,obj@*.fsproj`                                                                |
-| unity    | `Library,Temp,Obj,Logs,MemoryCaptures,Build,Builds@Assembly-CSharp.csproj`        |
-| unreal   | `Binaries,Build,Saved,DerivedDataCache,Intermediate@*.uproject`                   |
-| godot    | `.godot@project.godot`                                                            |
+| project   | rule                                                                       |
+| :-------- | :------------------------------------------------------------------------- |
+| node      | `node_modules`                                                             |
+| cargo     | `target@Cargo.toml`                                                        |
+| maven     | `target@pom.xml`                                                           |
+| gradle    | `.gradle,build@build.gradle`                                               |
+| python    | `__pycache__,.mypy_cache,.pytest_cache,.ruff_cache,.tox@*.py`              |
+| composer  | `vendor@composer.json`                                                     |
+| swift     | `.build,.swiftpm@Package.swift`                                            |
+| dart      | `.dart_tool,build@pubspec.yaml`                                            |
+| cocoapods | `Pods@Podfile`                                                             |
+| sbt       | `target,project/target@build.sbt`                                          |
+| zig       | `zig-cache,zig-out@build.zig`                                              |
+| stack     | `.stack-work@stack.yaml`                                                   |
+| jupyter   | `.ipynb_checkpoints@*.ipynb`                                               |
+| ocaml     | `_build@dune-project`                                                      |
+| elixir    | `_build@mix.exs`                                                           |
+| erlang    | `_build@rebar.config`                                                      |
+| vs        | `.vs,Debug,Release@*.sln`                                                  |
+| vc        | `Debug,Release@*.vcxproj`                                                  |
+| c#        | `bin,obj@*.csproj`                                                         |
+| f#        | `bin,obj@*.fsproj`                                                         |
+| unity     | `Library,Temp,Obj,Logs,MemoryCaptures,Build,Builds@Assembly-CSharp.csproj` |
+| unreal    | `Binaries,Build,Saved,DerivedDataCache,Intermediate@*.uproject`            |
+| godot     | `.godot@project.godot`                                                     |
 
 ## License
 
