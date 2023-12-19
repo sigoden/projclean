@@ -24,7 +24,7 @@ use fs::{delete_all, ls, search};
 use common::{human_readable_folder_size, Config, Message, PathItem, PathState};
 use inquire::{formatter::MultiOptionFormatter, MultiSelect};
 
-const RULES: [(&str, &str); 21] = [
+const RULES: [(&str, &str); 23] = [
     ("node", "node_modules"),
     ("cargo", "target@Cargo.toml"),
     ("maven", "target@pom.xml"),
@@ -35,10 +35,8 @@ const RULES: [(&str, &str); 21] = [
     ),
     ("composer", "vendor@composer.json"),
     ("swift", ".build,.swiftpm@Package.swift"),
-    (
-        "dart",
-        ".dart_tool,build,linux/flutter/ephemeral,windows/flutter/ephemeral@pubspec.yaml",
-    ),
+    ("dart", ".dart_tool,build@pubspec.yaml"),
+    ("cocoapods", "Pods@Podfile"),
     ("sbt", "target,project/target@build.sbt"),
     ("zig", "zig-cache,zig-out@build.zig"),
     ("stack", ".stack-work@stack.yaml"),
@@ -46,6 +44,7 @@ const RULES: [(&str, &str); 21] = [
     ("ocaml", "_build@dune-project"),
     ("elixir", "_build@mix.exs"),
     ("erlang", "_build@rebar.config"),
+    ("vs", ".vs,Debug,Release@*.sln"),
     ("vc", "Debug,Release@*.vcxproj"),
     ("c#", "bin,obj@*.csproj"),
     ("f#", "bin,obj@*.fsproj"),
