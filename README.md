@@ -3,7 +3,7 @@
 [![CI](https://github.com/sigoden/projclean/actions/workflows/ci.yaml/badge.svg)](https://github.com/sigoden/projclean/actions/workflows/ci.yaml)
 [![Crates](https://img.shields.io/crates/v/projclean.svg)](https://crates.io/crates/projclean)
 
-Project dependecies & build artifacts cleaner.
+Project dependecies & build artifacts cleanup tool.
 
 ![screenshot](https://github.com/sigoden/projclean/assets/4012553/a875c5f2-e87e-4b74-a48e-3636024d31eb)
 
