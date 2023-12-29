@@ -84,7 +84,6 @@ Rule consist of two parts:
 | cargo     | `target@Cargo.toml`                                                        |
 | maven     | `target@pom.xml`                                                           |
 | gradle    | `.gradle,build@build.gradle`                                               |
-| python    | `__pycache__,.mypy_cache,.pytest_cache,.ruff_cache,.tox@*.py`              |
 | cmake     | `build@CMakeLists.txt`                                                     |
 | composer  | `vendor@composer.json`                                                     |
 | swift     | `.build,.swiftpm@Package.swift`                                            |
@@ -101,8 +100,6 @@ Rule consist of two parts:
 | vc        | `Debug,Release@*.vcxproj`                                                  |
 | c#        | `bin,obj@*.csproj`                                                         |
 | f#        | `bin,obj@*.fsproj`                                                         |
-| unity     | `Library,Temp,Obj,Logs,MemoryCaptures,Build,Builds@Assembly-CSharp.csproj` |
-| unreal    | `Binaries,Build,Saved,DerivedDataCache,Intermediate@*.uproject`            |
 | godot     | `.godot@project.godot`                                                     |
 
 ## License

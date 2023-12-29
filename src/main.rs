@@ -24,15 +24,11 @@ use fs::{delete_all, ls, search};
 use common::{human_readable_folder_size, Config, Message, PathItem, PathState};
 use inquire::{formatter::MultiOptionFormatter, MultiSelect};
 
-const RULES: [(&str, &str); 24] = [
+const RULES: [(&str, &str); 21] = [
     ("node", "node_modules"),
     ("cargo", "target@Cargo.toml"),
     ("maven", "target@pom.xml"),
     ("gradle", ".gradle,build@build.gradle"),
-    (
-        "python",
-        "__pycache__,.mypy_cache,.pytest_cache,.ruff_cache,.tox@*.py",
-    ),
     ("cmake", "build@CMakeLists.txt"),
     ("composer", "vendor@composer.json"),
     ("swift", ".build,.swiftpm@Package.swift"),
@@ -49,14 +45,6 @@ const RULES: [(&str, &str); 24] = [
     ("vc", "Debug,Release@*.vcxproj"),
     ("c#", "bin,obj@*.csproj"),
     ("f#", "bin,obj@*.fsproj"),
-    (
-        "unity",
-        "Library,Temp,Obj,Logs,MemoryCaptures,Build,Builds@Assembly-CSharp.csproj",
-    ),
-    (
-        "unreal",
-        "Binaries,Build,Saved,DerivedDataCache,Intermediate@*.uproject",
-    ),
     ("godot", ".godot@project.godot"),
 ];
 
