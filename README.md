@@ -85,6 +85,7 @@ Rule consist of two parts:
 | maven     | `target@pom.xml`                                                           |
 | gradle    | `.gradle,build@build.gradle`                                               |
 | python    | `__pycache__,.mypy_cache,.pytest_cache,.ruff_cache,.tox@*.py`              |
+| cmake     | `build@CMakeLists.txt`                                                     |
 | composer  | `vendor@composer.json`                                                     |
 | swift     | `.build,.swiftpm@Package.swift`                                            |
 | dart      | `.dart_tool,build@pubspec.yaml`                                            |
