@@ -24,7 +24,7 @@ use fs::{delete_all, ls, search};
 use common::{human_readable_folder_size, Config, Message, PathItem, PathState};
 use inquire::{formatter::MultiOptionFormatter, MultiSelect};
 
-const RULES: [(&str, &str); 23] = [
+const RULES: [(&str, &str); 24] = [
     ("node", "node_modules"),
     ("cargo", "target@Cargo.toml"),
     ("maven", "target@pom.xml"),
@@ -33,6 +33,7 @@ const RULES: [(&str, &str); 23] = [
         "python",
         "__pycache__,.mypy_cache,.pytest_cache,.ruff_cache,.tox@*.py",
     ),
+    ("cmake", "build@CMakeLists.txt"),
     ("composer", "vendor@composer.json"),
     ("swift", ".build,.swiftpm@Package.swift"),
     ("dart", ".dart_tool,build@pubspec.yaml"),
