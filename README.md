@@ -78,29 +78,30 @@ Rule consist of two parts:
 <target[,target...]>[@flag]
 ```
 
-| project   | rule                              |
-| :-------- | :-------------------------------- |
-| node      | `node_modules`                    |
-| cargo     | `target@Cargo.toml`               |
-| maven     | `target@pom.xml`                  |
-| gradle    | `.gradle,build@build.gradle`      |
-| cmake     | `build@CMakeLists.txt`            |
-| composer  | `vendor@composer.json`            |
-| swift     | `.build,.swiftpm@Package.swift`   |
-| dart      | `.dart_tool,build@pubspec.yaml`   |
-| cocoapods | `Pods@Podfile`                    |
-| sbt       | `target,project/target@build.sbt` |
-| zig       | `zig-cache,zig-out@build.zig`     |
-| stack     | `.stack-work@stack.yaml`          |
-| jupyter   | `.ipynb_checkpoints@*.ipynb`      |
-| ocaml     | `_build@dune-project`             |
-| elixir    | `_build@mix.exs`                  |
-| erlang    | `_build@rebar.config`             |
-| vs        | `.vs,Debug,Release@*.sln`         |
-| vc        | `Debug,Release@*.vcxproj`         |
-| c#        | `bin,obj@*.csproj`                |
-| f#        | `bin,obj@*.fsproj`                |
-| godot     | `.godot@project.godot`            |
+| project    | rule                              |
+| :--------- | :-------------------------------- |
+| node       | `node_modules`                    |
+| cargo      | `target@Cargo.toml`               |
+| maven      | `target@pom.xml`                  |
+| gradle     | `.gradle,build@build.gradle`      |
+| gradle-kts | `.gradle,build@build.gradle.kts`  |
+| cmake      | `build@CMakeLists.txt`            |
+| composer   | `vendor@composer.json`            |
+| swift      | `.build,.swiftpm@Package.swift`   |
+| dart       | `.dart_tool,build@pubspec.yaml`   |
+| cocoapods  | `Pods@Podfile`                    |
+| sbt        | `target,project/target@build.sbt` |
+| zig        | `zig-cache,zig-out@build.zig`     |
+| stack      | `.stack-work@stack.yaml`          |
+| jupyter    | `.ipynb_checkpoints@*.ipynb`      |
+| ocaml      | `_build@dune-project`             |
+| elixir     | `_build@mix.exs`                  |
+| erlang     | `_build@rebar.config`             |
+| vs         | `.vs,Debug,Release@*.sln`         |
+| vc         | `Debug,Release@*.vcxproj`         |
+| c#         | `bin,obj@*.csproj`                |
+| f#         | `bin,obj@*.fsproj`                |
+| godot      | `.godot@project.godot`            |
 
 ## License
 
