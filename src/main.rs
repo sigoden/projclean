@@ -24,11 +24,12 @@ use fs::{delete_all, ls, search};
 use common::{human_readable_folder_size, Config, Message, PathItem, PathState};
 use inquire::{formatter::MultiOptionFormatter, MultiSelect};
 
-const RULES: [(&str, &str); 21] = [
+const RULES: [(&str, &str); 22] = [
     ("node", "node_modules"),
     ("cargo", "target@Cargo.toml"),
     ("maven", "target@pom.xml"),
     ("gradle", ".gradle,build@build.gradle"),
+    ("gradle-kts", ".gradle,build@build.gradle.kts"),
     ("cmake", "build@CMakeLists.txt"),
     ("composer", "vendor@composer.json"),
     ("swift", ".build,.swiftpm@Package.swift"),
