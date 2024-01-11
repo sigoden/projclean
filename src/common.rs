@@ -18,7 +18,7 @@ pub struct Config {
 impl Config {
     pub fn is_no_check_rule(&self, id: &str) -> bool {
         if let Some(rule) = self.rules.iter().find(|rule| rule.id.as_str() == id) {
-            rule.check.is_none()
+            rule.no_check()
         } else {
             false
         }
@@ -72,7 +72,7 @@ fn parse_size(value: &str) -> Option<u64> {
 pub struct Rule {
     id: String,
     purge: HashMap<String, Vec<String>>,
-    check: Option<glob::Pattern>,
+    check: Vec<glob::Pattern>,
 }
 
 impl Rule {
@@ -84,10 +84,15 @@ impl Rule {
         self.purge.get(name)
     }
 
+    pub fn no_check(&self) -> bool {
+        self.check.is_empty()
+    }
+
     pub fn test_check(&self, name: &str) -> bool {
-        match self.check.as_ref() {
-            Some(check) => check.matches(name),
-            None => false,
+        if self.no_check() {
+            false
+        } else {
+            self.check.iter().any(|v| v.matches(name))
         }
     }
 }
@@ -104,11 +109,11 @@ impl FromStr for Rule {
         if purge_paths.is_empty() {
             bail!("{}", err_msg())
         }
-        let check = if check.is_empty() {
-            None
-        } else {
-            Some(glob::Pattern::new(check).with_context(err_msg)?)
-        };
+        let check: Result<Vec<_>> = check
+            .split(',')
+            .map(|v| glob::Pattern::new(v).with_context(err_msg))
+            .collect();
+        let check = check?;
         let mut purge: HashMap<String, Vec<String>> = HashMap::new();
         for path in purge_paths {
             match path.split_once('/') {
