@@ -30,10 +30,10 @@ pub const PATHS: [&str; 20] = [
 ];
 
 pub fn search(tmpdir: TempDir, rules: &[&str]) -> Result<Vec<String>> {
-    let cwd = tmpdir.display().to_string();
+    let name = tmpdir.file_name().unwrap().to_string_lossy().to_string();
     let output = Command::cargo_bin("projclean")
         .expect("Couldn't find test binary")
-        .current_dir(&cwd)
+        .current_dir(tmpdir.path())
         .arg("-P")
         .args(rules)
         .output()?;
@@ -41,8 +41,8 @@ pub fn search(tmpdir: TempDir, rules: &[&str]) -> Result<Vec<String>> {
     let mut paths: Vec<String> = output
         .split('\n')
         .map(|path| {
-            let path = if let Some(idx) = path.find(&cwd) {
-                &path[(idx + cwd.len() + 1)..]
+            let path = if let Some(idx) = path.find(&name) {
+                &path[(idx + name.len() + 1)..]
             } else {
                 path
             };
