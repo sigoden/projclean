@@ -41,8 +41,8 @@ pub fn search(tmpdir: TempDir, rules: &[&str]) -> Result<Vec<String>> {
     let mut paths: Vec<String> = output
         .split('\n')
         .map(|path| {
-            let path = if let Some(path) = path.strip_prefix(&cwd) {
-                &path[1..]
+            let path = if let Some(idx) = path.find(&cwd) {
+                &path[(idx + cwd.len() + 1)..]
             } else {
                 path
             };
