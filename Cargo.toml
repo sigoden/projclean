@@ -7,7 +7,6 @@ description = "Project dependencies & build artifacts cleanup tool"
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/sigoden/projclean"
 repository = "https://github.com/sigoden/projclean"
-autotests = false
 categories = ["command-line-utilities"]
 keywords = ["command-line", "clean", "tui"]
 
@@ -23,6 +22,10 @@ inquire = "0.6.2"
 remove_dir_all = "0.8.2"
 threadpool = "1.8.1"
 glob = "0.3.1"
+
+[dev-dependencies]
+assert_cmd = "2"
+assert_fs = "1"
 
 [profile.release]
 lto = true
