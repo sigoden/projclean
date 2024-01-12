@@ -159,10 +159,10 @@ impl<'a, 'b> Checker<'a, 'b> {
     fn check(&mut self, name: &'b str) {
         for rule in &self.config.rules {
             let matches = self.matches.entry(rule.get_id()).or_default();
-            if let Some(purges) = rule.test_purge(name) {
+            if let Some(purges) = rule.check_target(name) {
                 matches.purge.insert(name, purges.as_ref());
             }
-            if rule.test_check(name) {
+            if rule.check_project(name) {
                 matches.check.insert(name);
             }
         }
@@ -172,7 +172,7 @@ impl<'a, 'b> Checker<'a, 'b> {
         let mut output = HashMap::new();
         for (rule_id, matches) in &self.matches {
             if !matches.purge.is_empty()
-                && (!matches.check.is_empty() || self.config.is_no_check_rule(rule_id))
+                && (!matches.check.is_empty() || self.config.is_rule_no_detect(rule_id))
             {
                 for (name, purges) in &matches.purge {
                     if !output.contains_key(*name) {

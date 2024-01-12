@@ -75,7 +75,7 @@ Projclean find targets according search rule.
 Rule consist of two parts:
 
 ```
-<target[,target...]>[@check[,check...]]
+<target[,target...]>[@detect[,detect...]]
 ```
 
 | project  | rule                                          |
