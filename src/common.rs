@@ -101,40 +101,43 @@ impl FromStr for Rule {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (purge_paths, check) = match s.split_once('@') {
+        let (target_paths, detects) = match s.split_once('@') {
             Some((v1, v2)) => (v1.trim().split(',').collect::<Vec<&str>>(), v2.trim()),
             None => (s.split(',').collect(), ""),
         };
         let err_msg = || format!("Invalid rule '{}'", s);
-        if purge_paths.is_empty() {
+        if target_paths.is_empty() {
             bail!("{}", err_msg())
         }
-        let check: Result<Vec<_>> = check
-            .split(',')
-            .map(|v| glob::Pattern::new(v).with_context(err_msg))
-            .collect();
-        let check = check?;
-        let mut purge: HashMap<String, Vec<String>> = HashMap::new();
-        for path in purge_paths {
-            match path.split_once('/') {
+        let detects = if detects.is_empty() {
+            vec![]
+        } else {
+            detects
+                .split(',')
+                .map(|v| glob::Pattern::new(v).with_context(err_msg))
+                .collect::<Result<_>>()?
+        };
+        let mut targets: HashMap<String, Vec<String>> = HashMap::new();
+        for target in target_paths {
+            match target.split_once('/') {
                 Some((dir, _)) => {
-                    purge
+                    targets
                         .entry(dir.to_string())
                         .or_default()
-                        .push(path.to_string());
+                        .push(target.to_string());
                 }
                 None => {
-                    purge
-                        .entry(path.to_string())
+                    targets
+                        .entry(target.to_string())
                         .or_default()
-                        .push(path.to_string());
+                        .push(target.to_string());
                 }
             }
         }
         Ok(Rule {
             id: s.to_string(),
-            detects: check,
-            targets: purge,
+            detects,
+            targets,
         })
     }
 }
@@ -220,6 +223,7 @@ mod tests {
     #[test]
     fn test_rule() {
         let rule: Rule = "target".parse().unwrap();
+        assert!(rule.no_detect());
         assert_eq!(
             rule.check_target("target"),
             Some(&vec!["target".to_string()])
@@ -229,6 +233,7 @@ mod tests {
         assert_eq!(rule.check_target("Target"), None);
 
         let rule: Rule = "Debug,Release@*.sln".parse().unwrap();
+        assert!(!rule.no_detect());
         assert_eq!(rule.check_target("Debug"), Some(&vec!["Debug".to_string()]));
         assert_eq!(rule.check_target("Debug-"), None);
         assert_eq!(rule.check_target("-Debug"), None);

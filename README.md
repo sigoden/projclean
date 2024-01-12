@@ -3,16 +3,9 @@
 [![CI](https://github.com/sigoden/projclean/actions/workflows/ci.yaml/badge.svg)](https://github.com/sigoden/projclean/actions/workflows/ci.yaml)
 [![Crates](https://img.shields.io/crates/v/projclean.svg)](https://crates.io/crates/projclean)
 
-Project dependecies & build artifacts cleanup tool.
+Project dependencies & build artifacts cleanup tool.
 
 ![screenshot](https://github.com/sigoden/projclean/assets/4012553/a875c5f2-e87e-4b74-a48e-3636024d31eb)
-
-## Why
-
-- **Save space**: Cleans unnecessary directories and files.
-- **Very fast**: Written in rust, optimized for concurrency.
-- **Easy to use**: A tui listing all found targets and pressing `SPACE` to get rid of them.
-- **Minified**: single executable file, no dependencies, no installation.
 
 ## Install
 
@@ -60,7 +53,7 @@ projclean node_modules target@Cargo.toml
 Start searching from a specific directory with `-C` or `--cwd`
 
 ```sh
-projclean -C $HOME node_modules # equal to `cd $HOME && projclean node_modules`
+projclean -C $HOME node_modules       # equal to `cd $HOME && projclean node_modules`
 ```
 
 Find node_modules with the latest updates over 30 days and occupy more than 1G disk space.
