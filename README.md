@@ -5,7 +5,7 @@
 
 Project dependencies & build artifacts cleanup tool.
 
-![screenshot](https://github.com/sigoden/projclean/assets/4012553/a875c5f2-e87e-4b74-a48e-3636024d31eb)
+![screenshot](https://github.com/sigoden/projclean/assets/4012553/82c28551-6d68-4e56-8565-f7aee1987723)
 
 ## Install
 
