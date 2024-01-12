@@ -86,19 +86,19 @@ Rule consist of two parts:
 | gradle   | `.gradle,build@build.gradle,build.gradle.kts` |
 | cmake    | `build@CMakeLists.txt`                        |
 | composer | `vendor@composer.json`                        |
-| swift    | `.build,.swiftpm@Package.swift`               |
-| pub      | `.dart_tool,build@pubspec.yaml`               |
-| pod      | `Pods@Podfile`                                |
-| sbt      | `target,project/target@build.sbt`             |
-| zig      | `zig-cache,zig-out@build.zig`                 |
-| stack    | `.stack-work@stack.yaml`                      |
-| jupyter  | `.ipynb_checkpoints@*.ipynb`                  |
-| dune     | `_build@dune-project`                         |
-| mix      | `_build@mix.exs`                              |
-| rebar    | `_build@rebar.config`                         |
+| dotnet   | `bin,obj@*.csproj,*.fsproj`                   |
 | vs       | `.vs,Debug,Release@*.sln`                     |
 | vc++     | `Debug,Release@*.vcxproj`                     |
-| .net     | `bin,obj@*.csproj,*.fsproj`                   |
+| swift    | `.build,.swiftpm@Package.swift`               |
+| pod      | `Pods@Podfile`                                |
+| pub      | `.dart_tool,build@pubspec.yaml`               |
+| sbt      | `target,project/target@build.sbt`             |
+| jupyter  | `.ipynb_checkpoints@*.ipynb`                  |
+| zig      | `zig-cache,zig-out@build.zig`                 |
+| rebar    | `_build@rebar.config`                         |
+| dune     | `_build@dune-project`                         |
+| mix      | `_build@mix.exs`                              |
+| stack    | `.stack-work@stack.yaml`                      |
 | godot    | `.godot@project.godot`                        |
 
 ## License
