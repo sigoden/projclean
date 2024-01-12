@@ -16,9 +16,9 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn is_no_check_rule(&self, id: &str) -> bool {
+    pub fn is_rule_no_detect(&self, id: &str) -> bool {
         if let Some(rule) = self.rules.iter().find(|rule| rule.id.as_str() == id) {
-            rule.no_check()
+            rule.no_detect()
         } else {
             false
         }
@@ -71,8 +71,8 @@ fn parse_size(value: &str) -> Option<u64> {
 #[derive(Debug, Clone)]
 pub struct Rule {
     id: String,
-    purge: HashMap<String, Vec<String>>,
-    check: Vec<glob::Pattern>,
+    targets: HashMap<String, Vec<String>>,
+    detects: Vec<glob::Pattern>,
 }
 
 impl Rule {
@@ -80,19 +80,19 @@ impl Rule {
         &self.id
     }
 
-    pub fn test_purge(&self, name: &str) -> Option<&Vec<String>> {
-        self.purge.get(name)
+    pub fn check_target(&self, name: &str) -> Option<&Vec<String>> {
+        self.targets.get(name)
     }
 
-    pub fn no_check(&self) -> bool {
-        self.check.is_empty()
+    pub fn no_detect(&self) -> bool {
+        self.detects.is_empty()
     }
 
-    pub fn test_check(&self, name: &str) -> bool {
-        if self.no_check() {
+    pub fn check_project(&self, name: &str) -> bool {
+        if self.no_detect() {
             false
         } else {
-            self.check.iter().any(|v| v.matches(name))
+            self.detects.iter().any(|v| v.matches(name))
         }
     }
 }
@@ -133,8 +133,8 @@ impl FromStr for Rule {
         }
         Ok(Rule {
             id: s.to_string(),
-            check,
-            purge,
+            detects: check,
+            targets: purge,
         })
     }
 }
@@ -220,16 +220,19 @@ mod tests {
     #[test]
     fn test_rule() {
         let rule: Rule = "target".parse().unwrap();
-        assert_eq!(rule.test_purge("target"), Some(&vec!["target".to_string()]));
-        assert_eq!(rule.test_purge("-target"), None);
-        assert_eq!(rule.test_purge("target-"), None);
-        assert_eq!(rule.test_purge("Target"), None);
+        assert_eq!(
+            rule.check_target("target"),
+            Some(&vec!["target".to_string()])
+        );
+        assert_eq!(rule.check_target("-target"), None);
+        assert_eq!(rule.check_target("target-"), None);
+        assert_eq!(rule.check_target("Target"), None);
 
         let rule: Rule = "Debug,Release@*.sln".parse().unwrap();
-        assert_eq!(rule.test_purge("Debug"), Some(&vec!["Debug".to_string()]));
-        assert_eq!(rule.test_purge("Debug-"), None);
-        assert_eq!(rule.test_purge("-Debug"), None);
-        assert!(rule.test_check("App.sln"));
+        assert_eq!(rule.check_target("Debug"), Some(&vec!["Debug".to_string()]));
+        assert_eq!(rule.check_target("Debug-"), None);
+        assert_eq!(rule.check_target("-Debug"), None);
+        assert!(rule.check_project("App.sln"));
     }
 
     #[test]
