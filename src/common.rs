@@ -223,7 +223,7 @@ mod tests {
     #[test]
     fn test_rule() {
         let rule: Rule = "target".parse().unwrap();
-        assert_eq!(rule.no_detect(), true);
+        assert!(rule.no_detect());
         assert_eq!(
             rule.check_target("target"),
             Some(&vec!["target".to_string()])
@@ -233,7 +233,7 @@ mod tests {
         assert_eq!(rule.check_target("Target"), None);
 
         let rule: Rule = "Debug,Release@*.sln".parse().unwrap();
-        assert_eq!(rule.no_detect(), false);
+        assert!(!rule.no_detect());
         assert_eq!(rule.check_target("Debug"), Some(&vec!["Debug".to_string()]));
         assert_eq!(rule.check_target("Debug-"), None);
         assert_eq!(rule.check_target("-Debug"), None);
