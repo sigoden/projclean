@@ -3,7 +3,7 @@ name = "projclean"
 version = "0.7.0"
 edition = "2021"
 authors = ["sigoden <sigoden@gmail.com>"]
-description = "Project dependecies & build artifacts cleanup tool"
+description = "Project dependencies & build artifacts cleanup tool"
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/sigoden/projclean"
 repository = "https://github.com/sigoden/projclean"
@@ -14,7 +14,7 @@ keywords = ["command-line", "clean", "tui"]
 [dependencies]
 anyhow = "1.0.75"
 jwalk = "0.8.1"
-ratatui = "0.24.0"
+ratatui = "0.25.0"
 crossterm = "0.27.0"
 crossbeam-utils = "0.8.16"
 clap = "4.4.11"

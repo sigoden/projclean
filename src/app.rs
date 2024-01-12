@@ -217,7 +217,7 @@ impl App {
             .map(|(t, a)| Line::from(vec![t.set_style(style)]).alignment(a));
             Row::new(row_cells)
         });
-        let table = Table::new(rows).widths(&widths).column_spacing(1).block(
+        let table = Table::new(rows, widths).column_spacing(1).block(
             Block::default()
                 .borders(Borders::ALL)
                 .padding(Padding::new(0, 1, 0, 0))
