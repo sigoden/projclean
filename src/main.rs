@@ -24,27 +24,26 @@ use fs::{delete_all, ls, search};
 use common::{human_readable_folder_size, Config, Message, PathItem, PathState};
 use inquire::{formatter::MultiOptionFormatter, MultiSelect};
 
-const RULES: [(&str, &str); 21] = [
-    ("node", "node_modules"),
+const RULES: [(&str, &str); 20] = [
+    ("nodejs", "node_modules"),
     ("cargo", "target@Cargo.toml"),
     ("maven", "target@pom.xml"),
     ("gradle", ".gradle,build@build.gradle,build.gradle.kts"),
     ("cmake", "build@CMakeLists.txt"),
     ("composer", "vendor@composer.json"),
     ("swift", ".build,.swiftpm@Package.swift"),
-    ("dart", ".dart_tool,build@pubspec.yaml"),
-    ("cocoapods", "Pods@Podfile"),
+    ("pub", ".dart_tool,build@pubspec.yaml"),
+    ("pod", "Pods@Podfile"),
     ("sbt", "target,project/target@build.sbt"),
     ("zig", "zig-cache,zig-out@build.zig"),
     ("stack", ".stack-work@stack.yaml"),
     ("jupyter", ".ipynb_checkpoints@*.ipynb"),
-    ("ocaml", "_build@dune-project"),
-    ("elixir", "_build@mix.exs"),
-    ("erlang", "_build@rebar.config"),
+    ("dune", "_build@dune-project"),
+    ("mix", "_build@mix.exs"),
+    ("rebar", "_build@rebar.config"),
     ("vs", ".vs,Debug,Release@*.sln"),
-    ("vc", "Debug,Release@*.vcxproj"),
-    ("c#", "bin,obj@*.csproj"),
-    ("f#", "bin,obj@*.fsproj"),
+    ("vc++", "Debug,Release@*.vcxproj"),
+    (".net", "bin,obj@*.csproj,*.fsproj"),
     ("godot", ".godot@project.godot"),
 ];
 
