@@ -350,14 +350,11 @@ impl App {
     }
 
     fn start_deleting_item(&mut self) -> Option<PathBuf> {
-        if let Some(index) = self.table_state.selected() {
-            let item = &mut self.items[index];
-            if item.state != PathState::Normal || item.size.is_none() {
-                None
-            } else {
-                item.state = PathState::StartDeleting;
-                Some(item.path.clone())
-            }
+        let index = self.table_state.selected()?;
+        let item = self.items.get_mut(index)?;
+        if item.state == PathState::Normal && item.size.is_some() {
+            item.state = PathState::StartDeleting;
+            Some(item.path.clone())
         } else {
             None
         }
