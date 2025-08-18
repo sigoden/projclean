@@ -210,8 +210,8 @@ fn du(path: &Path) -> Result<u64> {
 }
 
 fn last_modified(path: &Path) -> Result<Duration> {
-    let metdata = std::fs::metadata(path)?;
-    let modified = metdata.modified()?;
+    let metadata = std::fs::metadata(path)?;
+    let modified = metadata.modified()?;
     let now = SystemTime::now();
     let output = now.duration_since(modified)?;
     Ok(output)
