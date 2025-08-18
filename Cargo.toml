@@ -13,13 +13,13 @@ keywords = ["command-line", "cleanup", "project"]
 [dependencies]
 anyhow = "1.0.75"
 jwalk = "0.8.1"
-ratatui = "0.25.0"
-crossterm = "0.27.0"
+ratatui = "0.29.0"
+crossterm = "0.29.0"
 crossbeam-utils = "0.8.16"
 clap = "4.4.11"
 ctrlc = "3.4.1"
-inquire = "0.6.2"
-remove_dir_all = "0.8.2"
+inquire = "0.7.5"
+remove_dir_all = "1.0.0"
 threadpool = "1.8.1"
 glob = "0.3.1"
 

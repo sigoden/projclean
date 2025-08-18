@@ -173,7 +173,7 @@ impl App {
 
         let areas = Layout::default()
             .constraints(constraints)
-            .split(frame.size());
+            .split(frame.area());
 
         self.draw_table_view(frame, areas[0]);
         self.draw_status_bar(frame, areas[1]);

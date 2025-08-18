@@ -150,6 +150,7 @@ pub enum Message {
     DoneSearch,
 }
 
+#[allow(unused)]
 #[derive(Debug)]
 pub struct PathItem {
     pub path: PathBuf,
