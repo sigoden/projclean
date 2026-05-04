@@ -24,11 +24,10 @@ use fs::{delete_all, ls, search};
 use common::{human_readable_folder_size, Config, Message, PathItem, PathState};
 use inquire::{formatter::MultiOptionFormatter, MultiSelect};
 
-const RULES: [(&str, &str); 17] = [
+const RULES: [(&str, &str); 16] = [
     ("nodejs", "node_modules,.next@package.json"),
     ("cargo", "target@Cargo.toml"),
     ("python", ".venv,venv@pyproject.toml"),
-    ("go", "vendor,bin,obj@go.mod"),
     ("maven", "target@pom.xml"),
     ("gradle", ".gradle,build@build.gradle,build.gradle.kts"),
     ("cmake", "build@CMakeLists.txt"),

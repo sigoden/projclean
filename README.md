@@ -73,10 +73,9 @@ Rule consist of two parts:
 
 | project  | rule                                          |
 | :------- | :-------------------------------------------- |
-| nodejs   | `node_modules,.next@package.json`              |
+| nodejs   | `node_modules,.next@package.json`             |
 | cargo    | `target@Cargo.toml`                           |
 | python   | `.venv,venv@pyproject.toml`                   |
-| go       | `vendor,bin,obj@go.mod`                       |
 | maven    | `target@pom.xml`                              |
 | gradle   | `.gradle,build@build.gradle,build.gradle.kts` |
 | cmake    | `build@CMakeLists.txt`                        |
