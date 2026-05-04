@@ -24,26 +24,23 @@ use fs::{delete_all, ls, search};
 use common::{human_readable_folder_size, Config, Message, PathItem, PathState};
 use inquire::{formatter::MultiOptionFormatter, MultiSelect};
 
-const RULES: [(&str, &str); 20] = [
-    ("nodejs", "node_modules"),
+const RULES: [(&str, &str); 17] = [
+    ("nodejs", "node_modules,.next@package.json"),
     ("cargo", "target@Cargo.toml"),
+    ("python", ".venv,venv@pyproject.toml"),
+    ("go", "vendor,bin,obj@go.mod"),
     ("maven", "target@pom.xml"),
     ("gradle", ".gradle,build@build.gradle,build.gradle.kts"),
     ("cmake", "build@CMakeLists.txt"),
     ("composer", "vendor@composer.json"),
-    ("dotnet", "bin,obj@*.csproj,*.fsproj"),
+    ("ruby", ".bundle,vendor@Gemfile"),
+    ("dotnet", "bin,obj@*.csproj,*.fsproj,*.vbproj"),
     ("vs", ".vs,Debug,Release@*.sln"),
     ("vc++", "Debug,Release@*.vcxproj"),
     ("swift", ".build,.swiftpm@Package.swift"),
-    ("pod", "Pods@Podfile"),
     ("pub", ".dart_tool,build@pubspec.yaml"),
-    ("sbt", "target,project/target@build.sbt"),
-    ("jupyter", ".ipynb_checkpoints@*.ipynb"),
     ("zig", "zig-cache,zig-out@build.zig"),
-    ("rebar", "_build@rebar.config"),
-    ("dune", "_build@dune-project"),
-    ("mix", "_build@mix.exs"),
-    ("stack", ".stack-work@stack.yaml"),
+    ("unity", "Library,Temp,Obj@ProjectSettings"),
     ("godot", ".godot@project.godot"),
 ];
 
