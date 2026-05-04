@@ -76,8 +76,15 @@ pub fn search(
                             continue;
                         }
                     }
+                    let project_type = config
+                        .rules
+                        .iter()
+                        .find(|r| r.get_id() == rule_id)
+                        .and_then(|r| r.get_project_type())
+                        .map(|s| s.to_string());
                     let relative_path = path.strip_prefix(&entry)?.to_path_buf();
-                    let path_item = PathItem::new(path, relative_path, rule_id, time, size);
+                    let path_item =
+                        PathItem::new(path, relative_path, rule_id, project_type, time, size);
                     let _ = tx.send(Message::AddPath(path_item));
                 }
             }

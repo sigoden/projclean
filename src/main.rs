@@ -144,8 +144,8 @@ fn command() -> Command {
 fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
     let mut config = Config::default();
 
-    let rules = if let Some(values) = matches.get_many::<String>("rules") {
-        values.cloned().collect()
+    let rules: Vec<(String, String)> = if let Some(values) = matches.get_many::<String>("rules") {
+        values.cloned().map(|v| (String::new(), v)).collect()
     } else {
         select_rules()?
     };
@@ -163,8 +163,12 @@ fn init_config(matches: &clap::ArgMatches) -> Result<Config> {
         config.set_size(size)?;
     }
 
-    for rule in rules {
-        config.add_rule(&rule)?;
+    for (name, rule) in rules {
+        if name.is_empty() {
+            config.add_rule(&rule)?;
+        } else {
+            config.add_named_rule(&name, &rule)?;
+        }
     }
 
     Ok(config)
@@ -194,7 +198,7 @@ fn set_working_dir(matches: &clap::ArgMatches) -> Result<PathBuf> {
     }
 }
 
-fn select_rules() -> Result<Vec<String>> {
+fn select_rules() -> Result<Vec<(String, String)>> {
     let options = RULES
         .map(|(name, rule)| format!("{name:<16}{rule}"))
         .to_vec();
@@ -207,10 +211,10 @@ fn select_rules() -> Result<Vec<String>> {
                     .iter()
                     .enumerate()
                     .find(|(_, v)| sel == *v)
-                    .map(|(i, _)| RULES[i].1.to_string())
+                    .map(|(i, _)| (RULES[i].0.to_string(), RULES[i].1.to_string()))
                     .unwrap()
             })
-            .collect::<Vec<String>>()
+            .collect::<Vec<(String, String)>>()
     };
 
     let formatter: MultiOptionFormatter<String> = &|a| {
@@ -219,6 +223,9 @@ fn select_rules() -> Result<Vec<String>> {
                 .map(|v| v.value.to_string())
                 .collect::<Vec<String>>(),
         )
+        .iter()
+        .map(|(_, rule)| rule.as_str())
+        .collect::<Vec<&str>>()
         .join(" ")
     };
 

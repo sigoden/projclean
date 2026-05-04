@@ -30,6 +30,12 @@ impl Config {
         Ok(())
     }
 
+    pub fn add_named_rule(&mut self, name: &str, value: &str) -> Result<()> {
+        let rule: Rule = value.parse::<Rule>()?.with_project_type(name);
+        self.rules.push(rule);
+        Ok(())
+    }
+
     pub fn set_time(&mut self, time: &str) -> Result<()> {
         let (order, time) = extract_order(time);
         let time: usize = time.parse().map_err(|_| anyhow!("Invalid time value"))?;
@@ -71,6 +77,7 @@ fn parse_size(value: &str) -> Option<u64> {
 #[derive(Debug, Clone)]
 pub struct Rule {
     id: String,
+    project_type: Option<String>,
     targets: HashMap<String, Vec<String>>,
     detects: Vec<glob::Pattern>,
 }
@@ -82,6 +89,15 @@ impl Rule {
 
     pub fn check_target(&self, name: &str) -> Option<&Vec<String>> {
         self.targets.get(name)
+    }
+
+    pub fn get_project_type(&self) -> Option<&str> {
+        self.project_type.as_deref()
+    }
+
+    pub fn with_project_type(mut self, project_type: &str) -> Self {
+        self.project_type = Some(project_type.to_string());
+        self
     }
 
     pub fn no_detect(&self) -> bool {
@@ -136,6 +152,7 @@ impl FromStr for Rule {
         }
         Ok(Rule {
             id: s.to_string(),
+            project_type: None,
             detects,
             targets,
         })
@@ -156,6 +173,7 @@ pub struct PathItem {
     pub path: PathBuf,
     pub relative_path: PathBuf,
     pub rule_id: String,
+    pub project_type: Option<String>,
     pub time: Option<Duration>,
     pub time_text: String,
     pub size: Option<u64>,
@@ -175,6 +193,7 @@ impl PathItem {
         path: PathBuf,
         relative_path: PathBuf,
         rule_id: &str,
+        project_type: Option<String>,
         time: Option<Duration>,
         size: Option<u64>,
     ) -> Self {
@@ -190,6 +209,7 @@ impl PathItem {
             path,
             relative_path,
             rule_id: rule_id.to_string(),
+            project_type,
             time,
             time_text,
             size,
