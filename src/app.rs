@@ -8,7 +8,7 @@ use crossterm::{
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     layout::{Alignment, Constraint, Layout, Rect},
-    style::{Color, Modifier, Style, Styled, Stylize},
+    style::{Color, Modifier, Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Borders, Padding, Paragraph, Row, Table, TableState},
     Frame, Terminal,
@@ -16,7 +16,7 @@ use ratatui::{
 use remove_dir_all::remove_dir_all;
 use std::{
     io::{self, stdout},
-    path::{Path, PathBuf},
+    path::PathBuf,
     sync::mpsc::{Receiver, Sender},
     time::{Duration, Instant},
 };
@@ -196,17 +196,33 @@ impl App {
                 PathState::StartDeleting => self.spinner().to_string(),
                 _ => String::new(),
             };
+            let path_str = item.relative_path.display().to_string();
+            let path_cell = if let Some(project_type) = &item.project_type {
+                let tag = format!(" [{}]", project_type);
+                let path_only_width = path_width.saturating_sub(tag.len() as u16).max(10);
+                let truncated = truncate_path(&path_str, path_only_width);
+                let full = format!("{truncated}{tag}");
+                let (path_part, tag_part) = full.split_at(full.len() - tag.len());
+                Line::from(vec![
+                    Span::styled(path_part.to_string(), style),
+                    Span::styled(tag_part.to_string(), style.fg(Color::DarkGray)),
+                ])
+                .alignment(Alignment::Left)
+            } else {
+                Line::from(vec![Span::styled(
+                    truncate_path(&path_str, path_width),
+                    style,
+                )])
+                .alignment(Alignment::Left)
+            };
             let row_cells = [
-                (indicator, Alignment::Left),
-                (
-                    truncate_path(&item.relative_path, path_width),
-                    Alignment::Left,
-                ),
-                (item.time_text.clone(), Alignment::Right),
-                (item.size_text.clone(), Alignment::Right),
-            ]
-            .into_iter()
-            .map(|(t, a)| Line::from(vec![t.set_style(style)]).alignment(a));
+                Line::from(vec![Span::styled(indicator, style)]).alignment(Alignment::Left),
+                path_cell,
+                Line::from(vec![Span::styled(item.time_text.clone(), style)])
+                    .alignment(Alignment::Right),
+                Line::from(vec![Span::styled(item.size_text.clone(), style)])
+                    .alignment(Alignment::Right),
+            ];
             Row::new(row_cells)
         });
         let table = Table::new(rows, widths).column_spacing(1).block(
@@ -376,8 +392,7 @@ impl App {
     }
 }
 
-fn truncate_path(path: &Path, width: u16) -> String {
-    let path = path.to_string_lossy();
+fn truncate_path(path: &str, width: u16) -> String {
     let preserve_len: usize = PATH_PRESERVE_WIDTH;
     let width = (width as usize).max(2 * preserve_len + 3);
     let len = path.len();
