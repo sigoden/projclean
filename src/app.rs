@@ -67,7 +67,7 @@ fn init_terminal() -> io::Result<Terminal<impl Backend>> {
 fn restore_terminal(mut terminal: Terminal<impl Backend>) -> io::Result<()> {
     disable_raw_mode()?;
     stdout().execute(LeaveAlternateScreen)?;
-    terminal.show_cursor()?;
+    let _ = terminal.show_cursor();
     Ok(())
 }
 
@@ -81,7 +81,7 @@ impl App {
         let tick_rate = Duration::from_millis(TICK_INTERVAL);
         let mut last_tick = Instant::now();
         while self.app_state != AppState::Exit {
-            terminal.draw(|frame| self.draw(frame))?;
+            let _ = terminal.draw(|frame| self.draw(frame));
 
             self.handle_next_message(&rx);
 
@@ -135,16 +135,8 @@ impl App {
         }
         self.clear_tmp_state();
         match key.code {
-            KeyCode::Down => {
-                if key.kind == event::KeyEventKind::Press {
-                    self.next()
-                }
-            }
-            KeyCode::Up => {
-                if key.kind == event::KeyEventKind::Press {
-                    self.previous()
-                }
-            }
+            KeyCode::Down => self.next(),
+            KeyCode::Up => self.previous(),
             KeyCode::Char(' ') => {
                 self.delete_item(tx.clone());
             }
@@ -322,12 +314,12 @@ impl App {
     }
 
     fn order_by_lastmod(&mut self) {
-        self.items.sort_by(|b, a| a.time.cmp(&b.time));
+        self.items.sort_by_key(|a| std::cmp::Reverse(a.time));
     }
 
     fn order_by_size(&mut self) {
         self.items
-            .sort_by(|b, a| a.size.unwrap_or_default().cmp(&b.size.unwrap_or_default()));
+            .sort_by_key(|a| std::cmp::Reverse(a.size.unwrap_or_default()));
     }
 
     fn add_item(&mut self, item: PathItem) {
