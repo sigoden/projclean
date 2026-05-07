@@ -73,7 +73,7 @@ Rule consist of two parts:
 
 | project  | rule                                          |
 | :------- | :-------------------------------------------- |
-| nodejs   | `node_modules,.next@package.json`             |
+| nodejs   | `node_modules`                                |
 | cargo    | `target@Cargo.toml`                           |
 | python   | `.venv,venv@pyproject.toml,requirements.txt`  |
 | maven    | `target@pom.xml`                              |
