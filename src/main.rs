@@ -27,7 +27,7 @@ use inquire::{formatter::MultiOptionFormatter, MultiSelect};
 const RULES: [(&str, &str); 16] = [
     ("nodejs", "node_modules,.next@package.json"),
     ("cargo", "target@Cargo.toml"),
-    ("python", ".venv,venv@pyproject.toml"),
+    ("python", ".venv,venv@pyproject.toml,requirements.txt"),
     ("maven", "target@pom.xml"),
     ("gradle", ".gradle,build@build.gradle,build.gradle.kts"),
     ("cmake", "build@CMakeLists.txt"),
