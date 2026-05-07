@@ -25,7 +25,7 @@ use common::{human_readable_folder_size, Config, Message, PathItem, PathState};
 use inquire::{formatter::MultiOptionFormatter, MultiSelect};
 
 const RULES: [(&str, &str); 16] = [
-    ("nodejs", "node_modules,.next@package.json"),
+    ("nodejs", "node_modules"),
     ("cargo", "target@Cargo.toml"),
     ("python", ".venv,venv@pyproject.toml,requirements.txt"),
     ("maven", "target@pom.xml"),
